@@ -1,0 +1,23 @@
+{
+  "cabrillo": "Cabrillo",
+  "settingHost": "Host",
+  "settingApiKey": "API Key",
+  "title": "Cabrillo",
+  "categoriesTitle": "Categories",
+  "feedsTitle": "Feeds",
+  "unreadTitle": "Unread",
+  "starredTitle": "Starred",
+  "navHome": "Home",
+  "navFeeds": "Feeds",
+  "navStarred": "Starred",
+  "navEntries": "Entries",
+  "settingsLabel": "Settings",
+  "aboutLabel": "About",
+  "refreshLabel": "Refresh",
+  "shareLabel": "Share",
+  "openLinkLabel": "Open",
+  "sortNewest": "Newest",
+  "sortOldest": "Oldest",
+  "sortTitle": "Title",
+  "sortUnread": "Unread"
+}
