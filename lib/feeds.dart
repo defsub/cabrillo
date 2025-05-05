@@ -25,11 +25,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'cabrillo.dart';
 import 'date.dart';
 import 'entries.dart';
-import 'widget/image.dart';
-import 'widget/menu.dart';
 import 'miniflux/model.dart';
 import 'page.dart';
 import 'push.dart';
+import 'widget/image.dart';
+import 'widget/menu.dart';
 
 class FeedListWidget extends StatelessWidget {
   final List<Feed> _feeds;
@@ -43,9 +43,9 @@ class FeedListWidget extends StatelessWidget {
     final settings = context.watch<SettingsCubit>().state.settings;
     switch (settings.feedsSort) {
       case SortOrder.unread:
-        list.sort((a, b) => counts.unread(b.id).compareTo(counts.unread(a.id)));
+        list.sort((a, b) => counts.entriesUnread(b.id).compareTo(counts.entriesUnread(a.id)));
       case SortOrder.title:
-        list.sort((a, b) => a.title.compareTo(b.title));
+        list.sort((a, b) => a.sortTitle.compareTo(b.sortTitle));
       case SortOrder.newest:
         list.sort((a, b) => a.date.compareTo(b.date));
       case SortOrder.oldest:
@@ -58,22 +58,37 @@ class FeedListWidget extends StatelessWidget {
             itemCount: list.length,
             itemBuilder: (buildContext, index) {
               final feed = list[index];
-              return ListTile(
-                enabled: counts.unread(feed.id) > 0,
-                onTap: () => _onFeed(context, feed),
-                title: Text('${feed.title} (${counts.unread(feed.id)})'),
-                subtitle: Row(
-                  spacing: 6,
-                  children: [
-                    feedIcon(context, feed),
-                    Text(
-                      merge([
-                        relativeDate(context, feed.checkedAt),
-                        feed.category.title,
-                      ]),
+              final unreadCount = counts.entriesUnread(feed.id);
+              return Column(
+                children: [
+                  ListTile(
+                    // enabled: counts.unread(feed.id) > 0,
+                    onTap: () => _onFeed(context, feed),
+                    title: Text(feed.title),
+                    subtitle: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          spacing: 6,
+                          children: [
+                            feedIcon(context, feed),
+                            Text(
+                              merge([
+                                relativeDate(context, feed.checkedAt),
+                                feed.category.title,
+                              ]),
+                            ),
+                          ],
+                        ),
+                        if (unreadCount == 0)
+                          Icon(Icons.check, size: 16)
+                        else
+                          Text('$unreadCount'),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  Divider(height: 6),
+                ],
               );
             },
           ),
@@ -95,7 +110,7 @@ class FeedEntriesWidget extends ClientPage<Entries> {
   @override
   void load(BuildContext context, {Duration? ttl}) {
     context.miniflux.feedEntries(feed, ttl: ttl);
-    context.counts.reload();
+    context.reload();
   }
 
   @override

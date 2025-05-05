@@ -49,23 +49,7 @@ class SettingsWidget extends StatelessWidget {
                     ],
                   ),
                 ),
-                Card(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      ListTile(
-                        leading: const Icon(Icons.cloud),
-                        title: Text(context.strings.settingHost),
-                        subtitle: _HostField(state),
-                      ),
-                      ListTile(
-                        leading: const Icon(Icons.key),
-                        title: Text(context.strings.settingApiKey),
-                        subtitle: _TokenField(state),
-                      ),
-                    ],
-                  ),
-                ),
+                MinifluxSettings(),
               ],
             ),
           ),
@@ -86,6 +70,32 @@ class SettingsWidget extends StatelessWidget {
       title: Text(title),
       subtitle: Text(subtitle),
       trailing: Switch(value: value, onChanged: onChanged),
+    );
+  }
+}
+
+class MinifluxSettings extends StatelessWidget {
+  const MinifluxSettings({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<SettingsCubit>().state;
+    return Card(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          ListTile(
+            leading: const Icon(Icons.cloud),
+            title: Text(context.strings.settingHost),
+            subtitle: _HostField(state),
+          ),
+          ListTile(
+            leading: const Icon(Icons.key),
+            title: Text(context.strings.settingApiKey),
+            subtitle: _TokenField(state),
+          ),
+        ],
+      ),
     );
   }
 }

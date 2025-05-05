@@ -49,12 +49,14 @@ class Settings {
   factory Settings.initial() => Settings(
     user: '',
     host: 'reader.miniflux.app',
-    apiKey: 'your-api-key',
+    apiKey: '',
     pageSize: 100,
     feedsSort: SortOrder.unread,
     categoriesSort: SortOrder.title,
     entriesSort: SortOrder.newest,
   );
+
+  bool get hasApiKey => apiKey.isNotEmpty;
 
   String get endpoint {
     if (host.startsWith(RegExp(r'(http|https)://.+/'))) {

@@ -16,21 +16,22 @@
 // along with Cabrillo.  If not, see <https://www.gnu.org/licenses/>.
 
 import 'package:cabrillo/seen/seen.dart';
+import 'package:cabrillo/settings/widget.dart';
 import 'package:cabrillo/state/entry.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart' show BlocBuilder;
+import 'package:flutter_bloc/flutter_bloc.dart' show BlocBuilder, WatchContext;
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:logger/logger.dart';
 import 'package:relative_time/relative_time.dart';
 
 import 'cabrillo.dart';
-import 'widget/empty.dart';
 import 'home.dart';
 import 'log/basic_printer.dart';
 import 'push.dart';
+import 'widget/empty.dart';
 
 void main() async {
   // setup the logger
@@ -106,6 +107,16 @@ class __CabrilloWidgetState extends State<_CabrilloWidget> {
     NavigationIndex.starred: GlobalKey<NavigatorState>(),
   };
 
+  @override
+  void initState() {
+    super.initState();
+    if (context.settings.hasApiKey) {
+      // assume authenticated if there's an api key
+      context.app.authenticated();
+      context.app.me();
+    }
+  }
+
   NavigatorState? _navigatorState(NavigationIndex index) =>
       _navigatorKeys[index]?.currentState;
 
@@ -123,42 +134,55 @@ class __CabrilloWidgetState extends State<_CabrilloWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<CabrilloCubit, CabrilloState>(
-      builder: (context, state) {
-        // if (state.authenticated == false) {
-        //   return LoginWidget();
-        // }
-        final builders = _pageBuilders();
-        final pages = List.generate(
-          _routes.length,
-          (index) => builders[_routes[index]]!(context),
-        );
-        final navIndex = context.app.state.index;
-        return PopScope(
-          canPop: false,
-          onPopInvokedWithResult: (didPop, _) async {
-            if (didPop) {
-              return;
-            }
-            NavigatorState? navState = _navigatorState(navIndex);
-            if (navState != null) {
-              final handled = await navState.maybePop();
-              if (!handled && navIndex == NavigationIndex.home) {
-                // allow pop and app to exit
-                await SystemNavigator.pop();
-              }
-            }
-          },
-          child: Scaffold(
-            floatingActionButton: _fab(context),
-            body: IndexedStack(
-              index: state.navigationBarIndex,
-              children: pages,
+    final state = context.watch<CabrilloCubit>().state;
+    if (state.authenticated == false) {
+      return Scaffold(
+        appBar: AppBar(title: Text(context.strings.minifluxSettings)),
+        body: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Error: Authentication Failed',
+              style: Theme.of(context).textTheme.bodySmall,
             ),
-            bottomNavigationBar: _bottomNavigation(),
-          ),
-        );
+            MinifluxSettings(),
+            OutlinedButton(
+              child: Text(context.strings.applyLabel),
+              onPressed: () {
+                context.app.me();
+              },
+            ),
+          ],
+        ),
+      );
+    }
+
+    final builders = _pageBuilders();
+    final pages = List.generate(
+      _routes.length,
+      (index) => builders[_routes[index]]!(context),
+    );
+    final navIndex = context.app.state.index;
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) {
+          return;
+        }
+        NavigatorState? navState = _navigatorState(navIndex);
+        if (navState != null) {
+          final handled = await navState.maybePop();
+          if (!handled && navIndex == NavigationIndex.home) {
+            // allow pop and app to exit
+            await SystemNavigator.pop();
+          }
+        }
       },
+      child: Scaffold(
+        floatingActionButton: _fab(context),
+        body: IndexedStack(index: state.navigationBarIndex, children: pages),
+        bottomNavigationBar: _bottomNavigation(),
+      ),
     );
   }
 

@@ -28,4 +28,8 @@ class SettingsRepository {
   Settings? get settings {
     return cubit?.state.settings;
   }
+
+  bool get hasApiKey {
+    return cubit?.hasApiKey ?? false;
+  }
 }

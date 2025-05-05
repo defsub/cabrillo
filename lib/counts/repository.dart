@@ -32,15 +32,23 @@ class CountsRepository {
     });
   }
 
-  int read(int id) => cubit?.state.read(id) ?? 0;
+  int read(int id) => cubit?.state.entriesRead(id) ?? 0;
 
-  int unread(int id) => cubit?.state.unread(id) ?? 0;
+  int unread(int id) => cubit?.state.entriesUnread(id) ?? 0;
 
   void reload() {
     clientRepository
         .counts(ttl: Duration.zero)
         .then((counts) {
-          cubit?.update(counts);
+          cubit?.updateCounts(counts);
+        })
+        .onError((error, stackTrace) {
+          Future.delayed(const Duration(minutes: 3), () => reload());
+        });
+    clientRepository
+        .categories(ttl: Duration.zero)
+        .then((categories) {
+          cubit?.updateCategories(categories);
         })
         .onError((error, stackTrace) {
           Future.delayed(const Duration(minutes: 3), () => reload());

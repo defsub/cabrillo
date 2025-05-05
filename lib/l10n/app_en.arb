@@ -19,5 +19,13 @@
   "sortNewest": "Newest",
   "sortOldest": "Oldest",
   "sortTitle": "Title",
-  "sortUnread": "Unread"
+  "sortUnread": "Unread",
+  "applyLabel": "Apply",
+  "minifluxSettings": "Miniflux Settings",
+  "feedCount": "{count, plural, =0{No feeds} =1{1 feed} other{{count} feeds}}",
+  "@feedCount": {
+    "placeholders": {
+      "count": {}
+    }
+  }
 }

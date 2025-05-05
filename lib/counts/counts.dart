@@ -26,16 +26,29 @@ part 'counts.g.dart';
 class CountsState {
   final Map<String, int> reads;
   final Map<String, int> unreads;
+  final Map<int, int> categoryUnreads;
 
-  CountsState(this.reads, this.unreads);
+  CountsState(this.reads, this.unreads, this.categoryUnreads);
 
-  factory CountsState.zero() => CountsState({}, {});
+  factory CountsState.zero() => CountsState({}, {}, {});
 
-  int read(int id) => reads['$id'] ?? 0;
+  int entriesRead(int id) => reads['$id'] ?? 0;
 
-  int unread(int id) => unreads['$id'] ?? 0;
+  int entriesUnread(int id) => unreads['$id'] ?? 0;
+
+  int categoryEntriesUnread(int id) => categoryUnreads[id] ?? 0;
 
   int get totalUnread => unreads.values.fold(0, (c, v) => c + v);
+
+  CountsState copyWith({
+    Map<String, int>? reads,
+    Map<String, int>? unreads,
+    Map<int, int>? categoryUnreads,
+  }) => CountsState(
+    reads ?? this.reads,
+    unreads ?? this.unreads,
+    categoryUnreads ?? this.categoryUnreads,
+  );
 
   factory CountsState.fromJson(Map<String, dynamic> json) =>
       _$CountsStateFromJson(json);
@@ -44,14 +57,17 @@ class CountsState {
 }
 
 class CountsCubit extends HydratedCubit<CountsState> {
-  final CountsRepository countsRepository;
+  CountsCubit() : super(CountsState.zero());
 
-  CountsCubit(this.countsRepository) : super(CountsState.zero());
+  void updateCounts(Counts counts) =>
+      emit(state.copyWith(reads: counts.reads, unreads: counts.unreads));
 
-  void update(Counts counts) => emit(CountsState(counts.reads, counts.unreads));
-
-  void reload() {
-    countsRepository.reload();
+  void updateCategories(Categories categories) {
+    final counts = <int, int>{};
+    for (var c in categories.categories) {
+      counts[c.id] = c.totalUnread;
+    }
+    emit(state.copyWith(categoryUnreads: counts));
   }
 
   @override

@@ -28,6 +28,8 @@ class SettingsState {
 
   SettingsState(this.settings);
 
+  bool get hasApiKey => settings.hasApiKey;
+
   factory SettingsState.fromJson(Map<String, dynamic> json) =>
       _$SettingsStateFromJson(json);
 
@@ -36,6 +38,8 @@ class SettingsState {
 
 class SettingsCubit extends HydratedCubit<SettingsState> {
   SettingsCubit() : super(SettingsState(Settings.initial()));
+
+  bool get hasApiKey => state.hasApiKey;
 
   void add({
     String? user,

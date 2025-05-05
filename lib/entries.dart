@@ -65,7 +65,7 @@ class CategoryEntriesWidget extends ClientPage<Entries> {
   @override
   Future<void> reloadPage(BuildContext context) async {
     super.reloadPage(context);
-    context.counts.reload();
+    context.reload();
   }
 }
 

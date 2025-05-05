@@ -40,10 +40,12 @@ class CategoriesHomeWidget extends NavigatorClientPage<Categories> {
 
   @override
   Widget page(BuildContext context, Categories state) {
-    context.watch<CountsCubit>(); // sync
+    final counts = context.watch<CountsCubit>().state; // sync
     return Scaffold(
       appBar: AppBar(
-        title: Text(context.strings.feedsTitle),
+        title: Text(
+          '${context.strings.categoriesTitle} (${counts.totalUnread})',
+        ),
         actions: [
           popupMenu(context, [
             PopupItem.sortTitle(
@@ -52,7 +54,7 @@ class CategoriesHomeWidget extends NavigatorClientPage<Categories> {
             ),
             PopupItem.sortUnread(
               context,
-                  (context) => context.settings.categoriesSort = SortOrder.unread,
+              (context) => context.settings.categoriesSort = SortOrder.unread,
             ),
           ], icon: Icon(Icons.sort)),
           popupMenu(context, [
@@ -71,7 +73,7 @@ class CategoriesHomeWidget extends NavigatorClientPage<Categories> {
   @override
   Future<void> reloadPage(BuildContext context) async {
     super.reloadPage(context);
-    context.counts.reload();
+    context.reload();
   }
 }
 
@@ -93,11 +95,11 @@ class FeedsHomeWidget extends NavigatorClientPage<Feeds> {
           popupMenu(context, [
             PopupItem.sortTitle(
               context,
-                  (context) => context.settings.feedSort = SortOrder.title,
+              (context) => context.settings.feedSort = SortOrder.title,
             ),
             PopupItem.sortUnread(
               context,
-                  (context) => context.settings.feedSort = SortOrder.unread,
+              (context) => context.settings.feedSort = SortOrder.unread,
             ),
           ], icon: Icon(Icons.sort)),
           popupMenu(context, [
@@ -116,7 +118,7 @@ class FeedsHomeWidget extends NavigatorClientPage<Feeds> {
   @override
   Future<void> reloadPage(BuildContext context) async {
     super.reloadPage(context);
-    context.counts.reload();
+    context.reload();
   }
 }
 
@@ -127,15 +129,17 @@ class CategoryListWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final list = List<Category>.from(_categories);
+    final counts = context.watch<CountsCubit>().state;
     final settings = context.watch<SettingsCubit>().state.settings;
+
+    final list = List<Category>.from(_categories);
     switch (settings.categoriesSort) {
       case SortOrder.unread:
         list.sort((a, b) => b.totalUnread.compareTo(b.totalUnread));
       case SortOrder.title:
       case SortOrder.newest:
       case SortOrder.oldest:
-        list.sort((a, b) => a.title.compareTo(b.title));
+        list.sort((a, b) => a.sortTitle.compareTo(b.sortTitle));
     }
     return Column(
       children: [
@@ -144,10 +148,25 @@ class CategoryListWidget extends StatelessWidget {
             itemCount: list.length,
             itemBuilder: (buildContext, index) {
               final category = list[index];
-              return ListTile(
-                onTap: () => _onCategory(context, category),
-                title: Text('${category.title} (${category.totalUnread})'),
-                subtitle: Text('${category.feedCount} feeds'),
+              final unread = counts.categoryEntriesUnread(category.id);
+              return Column(
+                children: [
+                  ListTile(
+                    onTap: () => _onCategory(context, category),
+                    title: Text(category.title),
+                    subtitle: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(context.strings.feedCount(category.feedCount)),
+                        if (unread == 0)
+                          Icon(Icons.check, size: 16)
+                        else
+                          Text('$unread'),
+                      ],
+                    ),
+                  ),
+                  Divider(height: 6),
+                ],
               );
             },
           ),
@@ -194,7 +213,7 @@ class UnreadHomeWidget extends NavigatorClientPage<Entries> {
   @override
   Future<void> reloadPage(BuildContext context) async {
     super.reloadPage(context);
-    context.counts.reload();
+    context.reload();
   }
 }
 
@@ -231,7 +250,7 @@ class StarredHomeWidget extends NavigatorClientPage<Entries> {
   @override
   Future<void> reloadPage(BuildContext context) async {
     super.reloadPage(context);
-    context.counts.reload();
+    context.reload();
   }
 }
 
@@ -239,11 +258,11 @@ Widget _entriesSortMenu(BuildContext context) {
   return popupMenu(context, [
     PopupItem.sortNewest(
       context,
-          (context) => context.settings.entriesSort = SortOrder.newest,
+      (context) => context.settings.entriesSort = SortOrder.newest,
     ),
     PopupItem.sortOldest(
       context,
-          (context) => context.settings.entriesSort = SortOrder.oldest,
+      (context) => context.settings.entriesSort = SortOrder.oldest,
     ),
   ], icon: Icon(Icons.sort));
 }

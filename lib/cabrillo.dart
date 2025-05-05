@@ -21,6 +21,8 @@ import 'package:cabrillo/cache/json_repository.dart';
 import 'package:cabrillo/counts/counts.dart';
 import 'package:cabrillo/counts/repository.dart';
 import 'package:cabrillo/hive/hive_registrar.g.dart';
+import 'package:cabrillo/miniflux/client.dart';
+import 'package:cabrillo/miniflux/model.dart';
 import 'package:cabrillo/miniflux/repository.dart';
 import 'package:cabrillo/seen/repository.dart';
 import 'package:cabrillo/seen/seen.dart';
@@ -38,7 +40,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'miniflux/miniflux.dart';
 
-const appVersion = '0.0.1'; // #version#
+const appVersion = '0.0.2'; // #version#
 const appSource = 'https://cabrillo.app/';
 const appHome = 'https://cabrillo.app/';
 
@@ -92,13 +94,19 @@ class Cabrillo {
 
   List<SingleChildWidget> blocs() {
     return [
-      BlocProvider(create: (_) => CabrilloCubit()),
       BlocProvider(
         lazy: false,
         create: (context) {
-          final repo = context.read<CountsRepository>();
-          final counts = CountsCubit(repo);
-          repo.init(counts);
+          final clientRepository = context.read<ClientRepository>();
+          final settingsRepository = context.read<SettingsRepository>();
+          return CabrilloCubit(clientRepository, settingsRepository);
+        },
+      ),
+      BlocProvider(
+        lazy: false,
+        create: (context) {
+          final counts = CountsCubit();
+          context.read<CountsRepository>().init(counts);
           return counts;
         },
       ),
@@ -156,6 +164,8 @@ extension CabrilloContext on BuildContext {
 
   StarredRepository get starredRepository => read<StarredRepository>();
 
+  CountsRepository get countsRepository => read<CountsRepository>();
+
   MinifluxCubit get miniflux => read<MinifluxCubit>();
 
   CountsCubit get counts => read<CountsCubit>();
@@ -166,13 +176,16 @@ extension CabrilloContext on BuildContext {
 
   SettingsCubit get settings => read<SettingsCubit>();
 
+  void reload() {
+    countsRepository.reload();
+  }
+
   void sync() {
     final state = seenRepository.cubit?.state;
     if (state != null) {
       clientRepository.updateSeen(state).then((_) {
         seenRepository.flush();
-        clientRepository.categories(ttl: Duration.zero);
-        counts.reload();
+        reload();
       });
     }
   }
@@ -180,23 +193,47 @@ extension CabrilloContext on BuildContext {
 
 class CabrilloState {
   final NavigationIndex index;
+  final bool authenticated;
 
-  CabrilloState(this.index);
+  CabrilloState(this.index, this.authenticated);
 
-  factory CabrilloState.initial() => CabrilloState(NavigationIndex.home);
+  factory CabrilloState.initial() => CabrilloState(NavigationIndex.home, false);
 
-  CabrilloState copyWith({NavigationIndex? index}) =>
-      CabrilloState(index ?? this.index);
+  CabrilloState copyWith({NavigationIndex? index, bool? authenticated}) =>
+      CabrilloState(index ?? this.index, authenticated ?? this.authenticated);
 
   int get navigationBarIndex => index.index;
 }
 
 class CabrilloCubit extends Cubit<CabrilloState> {
-  CabrilloCubit() : super(CabrilloState.initial());
+  final ClientRepository clientRepository;
+  final SettingsRepository settingsRepository;
 
-  void home() => emit(state.copyWith(index: NavigationIndex.home));
+  CabrilloCubit(this.clientRepository, this.settingsRepository)
+    : super(CabrilloState.initial());
 
-  void starred() => emit(state.copyWith(index: NavigationIndex.starred));
+  void authenticated() => emit(state.copyWith(authenticated: true));
+
+  void unauthenticated() => emit(state.copyWith(authenticated: false));
+
+  void me() {
+    // TODO use fields from Me, store in state
+    clientRepository
+        .me(ttl: Duration.zero)
+        .then((me) {
+          print(me);
+          authenticated();
+        })
+        .onError((e, stack) {
+          if (e is ClientException && e.authenticationFailed) {
+            unauthenticated();
+          } else if (settingsRepository.hasApiKey) {
+            // assume authenticated if there's an api key
+            // but network check failed
+            authenticated();
+          }
+        });
+  }
 
   void goto(int index) =>
       emit(state.copyWith(index: NavigationIndex.values[index]));

@@ -15,7 +15,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Cabrillo.  If not, see <https://www.gnu.org/licenses/>.
 
+import 'package:cabrillo/miniflux/client.dart';
 import 'package:cabrillo/miniflux/miniflux.dart';
+import 'package:cabrillo/push.dart';
+import 'package:cabrillo/settings/widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -55,10 +58,15 @@ abstract mixin class ClientPageBuilder<T> {
   Widget page(BuildContext context, T state);
 
   Widget errorPage(BuildContext context, MinifluxError error) {
+    if (error is MinifluxAuthError) {
+      context.app.unauthenticated();
+    }
     return Center(
       child: TextButton(
         child: Text('Try Again (${error.error})'),
-        onPressed: () => reloadPage(context),
+        onPressed: () {
+          reloadPage(context);
+        },
       ),
     );
   }

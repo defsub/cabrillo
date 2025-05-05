@@ -50,6 +50,7 @@ class Category {
   final bool hideGlobally;
   final int feedCount;
   final int totalUnread;
+  final String _sortTitle;
 
   Category({
     required this.id,
@@ -58,7 +59,9 @@ class Category {
     this.hideGlobally = false,
     this.feedCount = 0,
     this.totalUnread = 0,
-  });
+  }) : _sortTitle = _sortableTitle(title);
+
+  String get sortTitle => _sortTitle;
 
   factory Category.fromJson(Map<String, dynamic> json) =>
       _$CategoryFromJson(json);
@@ -70,6 +73,8 @@ class Categories {
   final List<Category> categories;
 
   Categories(this.categories);
+
+  int get totalUnread => categories.fold(0, (c, v) => c + v.totalUnread);
 
   factory Categories.fromJson(List<dynamic> json) {
     List<Category> categories = [];
@@ -144,6 +149,7 @@ class Feed {
   final bool disabled;
   final Category category;
   final FeedIcon icon;
+  final String _sortTitle;
 
   Feed({
     required this.id,
@@ -164,7 +170,9 @@ class Feed {
     required this.disabled,
     required this.category,
     required this.icon,
-  });
+  }) : _sortTitle = _sortableTitle(title);
+
+  String get sortTitle => _sortTitle;
 
   DateTime get date => parseDate(checkedAt);
 
@@ -241,6 +249,7 @@ class Entry {
   final Feed feed;
   final List<Enclosure>? enclosures;
   final DateTime _date;
+  final String _sortTitle;
 
   Entry({
     required this.id,
@@ -258,13 +267,15 @@ class Entry {
     required this.readingTime,
     required this.feed,
     this.enclosures,
-  }) : _date = parseDate(publishedAt);
+  }) : _date = parseDate(publishedAt), _sortTitle = _sortableTitle(title);
 
   bool isRead() => status == 'read';
 
   bool isUnread() => status == 'unread';
 
   DateTime get date => _date;
+
+  String get sortTitle => _sortTitle;
 
   String get text {
     var result = content.replaceAllMapped(RegExp(r'<[^>]+>'), (match) {
@@ -413,4 +424,14 @@ class Counts {
   factory Counts.fromJson(Map<String, dynamic> json) => _$CountsFromJson(json);
 
   Map<String, dynamic> toJson() => _$CountsToJson(this);
+}
+
+final _titleRegexp = RegExp(r'^\s*(A|An|The)\s+(.+)$');
+
+String _sortableTitle(String title) {
+  final match = _titleRegexp.firstMatch(title);
+  if (match != null) {
+    title = '${match[2]}, ${match[1]}';
+  }
+  return title;
 }
