@@ -42,7 +42,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'miniflux/miniflux.dart';
 
-const appVersion = '0.0.2'; // #version#
+const appVersion = '0.0.3'; // #version#
 const appSource = 'https://cabrillo.app/';
 const appHome = 'https://cabrillo.app/';
 
