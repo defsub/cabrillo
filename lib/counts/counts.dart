@@ -15,7 +15,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Cabrillo.  If not, see <https://www.gnu.org/licenses/>.
 
-import 'package:cabrillo/counts/repository.dart';
 import 'package:cabrillo/miniflux/model.dart';
 import 'package:hydrated_bloc/hydrated_bloc.dart';
 import 'package:json_annotation/json_annotation.dart';

@@ -27,9 +27,6 @@ const defaultDirection = Direction.desc;
 const defaultStatus = Status.unread;
 const defaultOrder = Order.publishedAt;
 
-const defaultLimit = 100;
-const defaultPageSize = 25;
-
 abstract class ClientProvider {
   Client get client;
 

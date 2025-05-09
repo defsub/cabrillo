@@ -15,15 +15,16 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Cabrillo.  If not, see <https://www.gnu.org/licenses/>.
 
+import 'package:cabrillo/player/widget.dart';
 import 'package:cabrillo/seen/seen.dart';
 import 'package:cabrillo/settings/widget.dart';
-import 'package:cabrillo/state/entry.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart' show BlocBuilder, WatchContext;
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:logger/logger.dart';
 import 'package:relative_time/relative_time.dart';
 
@@ -31,11 +32,10 @@ import 'cabrillo.dart';
 import 'home.dart';
 import 'log/basic_printer.dart';
 import 'push.dart';
-import 'widget/empty.dart';
 
 void main() async {
   // setup the logger
-  Logger.level = Level.debug;
+  Logger.level = Level.error;
   Logger.defaultFilter = () => ProductionFilter();
   Logger.defaultPrinter = () => BasicPrinter();
 
@@ -121,6 +121,14 @@ class __CabrilloWidgetState extends State<_CabrilloWidget> {
       _navigatorKeys[index]?.currentState;
 
   void _onNavTapped(BuildContext context, int index) {
+    if (index == NavigationIndex.sync.index) {
+      Fluttertoast.showToast(
+        msg: context.strings.syncCount(context.seenRepository.count),
+      );
+      context.sync();
+      return;
+    }
+
     final currentIndex = context.app.state.navigationBarIndex;
     if (currentIndex == index) {
       NavigatorState? navState = _navigatorState(context.app.state.index);
@@ -157,11 +165,6 @@ class __CabrilloWidgetState extends State<_CabrilloWidget> {
       );
     }
 
-    final builders = _pageBuilders();
-    final pages = List.generate(
-      _routes.length,
-      (index) => builders[_routes[index]]!(context),
-    );
     final navIndex = context.app.state.index;
     return PopScope(
       canPop: false,
@@ -179,26 +182,53 @@ class __CabrilloWidgetState extends State<_CabrilloWidget> {
         }
       },
       child: Scaffold(
-        floatingActionButton: _fab(context),
-        body: IndexedStack(index: state.navigationBarIndex, children: pages),
+        // floatingActionButton: _fab(context),
+        body: _body(context),
         bottomNavigationBar: _bottomNavigation(),
       ),
     );
   }
 
-  Widget _fab(BuildContext context) {
-    return BlocBuilder<SeenCubit, EntryState>(
-      builder: (context, state) {
-        if (state.entries.isNotEmpty) {
-          return FloatingActionButton(
-            child: Icon(Icons.sync),
-            onPressed: () => context.sync(),
-          );
-        }
-        return const EmptyWidget();
-      },
+  Widget _body(BuildContext context) {
+    final state = context.app.state;
+    final builders = _pageBuilders();
+    final pages = List.generate(
+      _routes.length,
+      (index) => builders[_routes[index]]!(context),
+    );
+    return Column(
+      children: [
+        Expanded(
+          child: IndexedStack(index: state.navigationBarIndex, children: pages),
+        ),
+        if (context.showPlayer)
+          Dismissible(
+            key: UniqueKey(),
+            child: Card(
+              color: Theme.of(context).colorScheme.secondaryContainer,
+              child: PlayerWidget(),
+            ),
+            onDismissed: (dir) {
+              context.app.hidePlayer();
+            },
+          ),
+      ],
     );
   }
+
+  // Widget _fab(BuildContext context) {
+  //   return BlocBuilder<SeenCubit, EntryState>(
+  //     builder: (context, state) {
+  //       if (state.entries.isNotEmpty) {
+  //         return FloatingActionButton(
+  //           child: Icon(Icons.sync),
+  //           onPressed: () => context.sync(),
+  //         );
+  //       }
+  //       return const EmptyWidget();
+  //     },
+  //   );
+  // }
 
   Widget _bottomNavigation() {
     return Stack(
@@ -227,6 +257,10 @@ class __CabrilloWidgetState extends State<_CabrilloWidget> {
                   icon: const Icon(Icons.star),
                   label: context.strings.navStarred,
                 ),
+                BottomNavigationBarItem(
+                  icon: _syncIcon(context),
+                  label: context.strings.navSync,
+                ),
               ],
               currentIndex: index,
               onTap: (index) => _onNavTapped(context, index),
@@ -235,6 +269,15 @@ class __CabrilloWidgetState extends State<_CabrilloWidget> {
         ),
       ],
     );
+  }
+  
+  Widget _syncIcon(BuildContext context) {
+    final state = context.watch<SeenCubit>().state;
+    final count = state.count;
+    if (count == 0) {
+      return Icon(Icons.sync);
+    }
+    return Badge(label: Text('${state.count}'), child: Icon(Icons.sync));
   }
 
   Map<String, WidgetBuilder> _pageBuilders() {

@@ -15,9 +15,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Cabrillo.  If not, see <https://www.gnu.org/licenses/>.
 
-import 'package:cabrillo/seen/seen.dart';
-import 'package:cabrillo/starred/starred.dart';
+import 'package:cabrillo/miniflux/model.dart';
+import 'package:cabrillo/seen/widget.dart';
+import 'package:cabrillo/settings/settings.dart';
+import 'package:cabrillo/starred/widget.dart';
 import 'package:cabrillo/util.dart';
+import 'package:cabrillo/widget/image.dart';
+import 'package:cabrillo/widget/menu.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
@@ -25,12 +29,8 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
-import 'widget/button.dart';
 import 'cabrillo.dart';
 import 'date.dart';
-import 'widget/image.dart';
-import 'widget/menu.dart';
-import 'miniflux/model.dart';
 import 'page.dart';
 import 'push.dart';
 
@@ -78,6 +78,10 @@ class EntryListWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<SettingsCubit>();
+    final screen = MediaQuery.of(context).size;
+    final w = screen.width / 4;
+    final h = w / 1.25;
     return Column(
       children: [
         Expanded(
@@ -89,17 +93,21 @@ class EntryListWidget extends StatelessWidget {
                 entry,
                 category: category,
                 feed: feed,
+                size: Size(w, h),
               );
-              return VisibilityDetector(
-                key: Key('EntryTile-${entry.id}'),
-                onVisibilityChanged: (state) {
-                  if (state.visibleFraction > 0.9) {
-                    // print('read: ${entry.title}');
-                    context.seen.add(entry.id);
-                  }
-                },
-                child: tile,
-              );
+              if (context.enableAutoSeen(entry)) {
+                return VisibilityDetector(
+                  key: Key('EntryTile-${entry.id}'),
+                  onVisibilityChanged: (state) {
+                    if (state.visibleFraction > 0.9) {
+                      context.seen.add(entry.id);
+                    }
+                  },
+                  child: tile,
+                );
+              } else {
+                return tile;
+              }
             },
           ),
         ),
@@ -112,14 +120,21 @@ class EntryTileWidget extends StatelessWidget {
   final Entry entry;
   final Category? category;
   final Feed? feed;
+  final Size? size;
 
-  const EntryTileWidget(this.entry, {super.key, this.category, this.feed});
+  const EntryTileWidget(
+    this.entry, {
+    super.key,
+    this.category,
+    this.feed,
+    this.size,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final seen = context.watch<SeenCubit>().state.contains(entry.id);
-    final starred = context.watch<StarredCubit>().state.contains(entry.id);
-    final entryImage = entry.image;
+    // final seen = context.watch<SeenCubit>().state.contains(entry.id);
+    final entryImage =
+        context.settings.state.settings.showImages ? entry.image : null;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () => _onEntry(context, entry),
@@ -140,8 +155,8 @@ class EntryTileWidget extends StatelessWidget {
                 ),
                 if (entryImage != null)
                   image(
-                    width: 128,
-                    height: 80,
+                    width: size?.width ?? 100,
+                    height: size?.height ?? 80,
                     padding: EdgeInsets.only(left: 8),
                     entryImage.url,
                   ),
@@ -158,8 +173,12 @@ class EntryTileWidget extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
                     feedIcon(context, entry.feed, width: 20),
+                    // if (entry.hasAudio) Icon(Icons.podcasts, size: 20),
                     Text(
-                      relativeDate(context, entry.publishedAt),
+                      merge([
+                        relativeDate(context, entry.publishedAt),
+                        _readingTime(context, entry),
+                      ]),
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
@@ -168,25 +187,8 @@ class EntryTileWidget extends StatelessWidget {
                   spacing: 16,
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    if (seen) Icon(Icons.check, size: 20),
-                    SmallIconButton(
-                      onPressed: () {
-                        context.starredRepository.toggle(entry.id);
-                      },
-                      icon: Icon(
-                        starred ? Icons.star : Icons.star_outline,
-                        size: 20,
-                      ),
-                    ),
-                    // SmallIconButton(
-                    //   onPressed: () {},
-                    //   icon: Icon(
-                    //     seen
-                    //         ? Icons.check_box_outlined
-                    //         : Icons.check_box_outline_blank,
-                    //     size: 20,
-                    //   ),
-                    // ),
+                    seenSmallIconButton(context, entry),
+                    starredSmallIconButton(context, entry),
                   ],
                 ),
               ],
@@ -215,8 +217,8 @@ class EntryWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final starred = context.watch<StarredCubit>().state.contains(entry.id);
-    final entryImage = entry.image;
+    final entryImage =
+        context.settings.state.settings.showImages ? entry.image : null;
     final title = category?.title ?? feed?.title ?? entry.title;
     return Scaffold(
       appBar: AppBar(
@@ -240,11 +242,19 @@ class EntryWidget extends StatelessWidget {
               subtitle: ListTile(
                 dense: true,
                 contentPadding: EdgeInsets.zero,
-                trailing: IconButton(
-                  onPressed: () {
-                    context.starredRepository.toggle(entry.id);
-                  },
-                  icon: Icon(starred ? Icons.star : Icons.star_outline),
+                trailing: OverflowBar(
+                  children: [
+                    if (entry.hasAudio)
+                      IconButton(
+                        onPressed: () {
+                          context.player.play(entry, autoStart:true);
+                          context.app.showPlayer();
+                        },
+                        icon: Icon(Icons.play_arrow),
+                      ),
+                    seenIconButton(context, entry),
+                    starredIconButton(context, entry),
+                  ],
                 ),
                 title: Text(
                   merge([entry.feed.title, entry.author]),
@@ -255,7 +265,7 @@ class EntryWidget extends StatelessWidget {
                 subtitle: Text(
                   merge([
                     relativeDate(context, entry.publishedAt),
-                    '${entry.readingTime} minute read',
+                    _readingTime(context, entry),
                   ], separator: ', '),
                   style: Theme.of(context).textTheme.bodySmall,
                   softWrap: false,
@@ -273,30 +283,6 @@ class EntryWidget extends StatelessWidget {
         ),
       ),
     );
-    // Row(
-    //   children: [
-    //     IconButton(
-    //       icon: feedIcon(context, entry.feed),
-    //       onPressed: () {},
-    //     ),
-    //     Column(
-    //       mainAxisAlignment: MainAxisAlignment.start,
-    //       crossAxisAlignment: CrossAxisAlignment.start,
-    //       children: [
-    //         Text(
-    //           merge([entry.feed.title, entry.author]),
-    //           style: Theme.of(context).textTheme.titleSmall,
-    //           overflow: TextOverflow.clip,
-    //         ),
-    //         Text(
-    //           merge([
-    //             relativeDate(context, entry.publishedAt),
-    //             '${entry.readingTime} minute read',
-    //           ], separator: ', '),
-    //           style: Theme.of(context).textTheme.bodySmall,
-    //           overflow: TextOverflow.ellipsis,
-    //         ),
-    //       ],
   }
 
   void _onShare(BuildContext context) {
@@ -307,4 +293,13 @@ class EntryWidget extends StatelessWidget {
   void _onOpenLink(BuildContext context) {
     launchUrl(Uri.parse(entry.url));
   }
+}
+
+String _readingTime(BuildContext context, Entry entry) {
+  if (context.settings.state.settings.showReadingTime == false) {
+    return '';
+  }
+  return (entry.hasAudio)
+      ? context.strings.listeningTime(entry.readingTime)
+      : context.strings.readingTime(entry.readingTime);
 }

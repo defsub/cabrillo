@@ -25,6 +25,8 @@ class EntryState {
 
   EntryState(Iterable<int> entries) : entries = Set<int>.unmodifiable(entries);
 
+  int get count => entries.length;
+
   EntryState add(int id) {
     final s = Set<int>.from(entries);
     s.add(id);

@@ -29,9 +29,10 @@ class SeenRepository {
   }
 
   void update(Iterable<int> add, Iterable<int> remove) {
-    // print('update add=${List.from(add)} remove=${List.from(remove)}');
     cubit?.update(add, remove);
   }
+
+  int get count => cubit?.state.count ?? 0;
 
   void flush() {
     cubit?.flush();

@@ -1,7 +1,14 @@
 {
   "cabrillo": "Cabrillo",
+  "minifluxSettings": "Miniflux Settings",
   "settingHost": "Host",
-  "settingApiKey": "API Key",
+  "settingApiKey": "API key",
+  "settingPageDuration": "Page cache time",
+  "settingPageSize": "Entries per page",
+  "settingShowCounts": "Show unread counts",
+  "settingShowImages": "Show images",
+  "settingShowReadingTime": "Show reading time",
+  "settingAutoSeen": "Mark entries as read on seen",
   "title": "Cabrillo",
   "categoriesTitle": "Categories",
   "feedsTitle": "Feeds",
@@ -11,19 +18,38 @@
   "navFeeds": "Feeds",
   "navStarred": "Starred",
   "navEntries": "Entries",
+  "navSync": "Sync",
   "settingsLabel": "Settings",
   "aboutLabel": "About",
   "refreshLabel": "Refresh",
   "shareLabel": "Share",
-  "openLinkLabel": "Open",
+  "openLinkLabel": "External link",
+  "markPageReadLabel": "Mark page as read",
   "sortNewest": "Newest",
   "sortOldest": "Oldest",
   "sortTitle": "Title",
   "sortUnread": "Unread",
   "applyLabel": "Apply",
-  "minifluxSettings": "Miniflux Settings",
   "feedCount": "{count, plural, =0{No feeds} =1{1 feed} other{{count} feeds}}",
   "@feedCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "readingTime": "{count, plural, =0{} =1{1 minute read} other{{count} minute read}}",
+  "@readingTime": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "listeningTime": "{count, plural, =0{} =1{1 minute listen} other{{count} minute listen}}",
+  "@listeningTime": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "syncCount": "{count, plural, =0{0 entries} =1{1 entry} other{{count} entries}}",
+  "@SyncCount": {
     "placeholders": {
       "count": {}
     }

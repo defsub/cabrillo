@@ -19,12 +19,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'model.g.dart';
 
-enum SortOrder {
-  newest,
-  oldest,
-  title,
-  unread,
-}
+enum SortOrder { newest, oldest, title, unread }
 
 @JsonSerializable()
 class Settings {
@@ -35,6 +30,11 @@ class Settings {
   final SortOrder feedsSort;
   final SortOrder categoriesSort;
   final SortOrder entriesSort;
+  final Duration pageDuration;
+  final bool showCounts;
+  final bool showReadingTime;
+  final bool showImages;
+  final bool autoSeen;
 
   Settings({
     required this.user,
@@ -44,6 +44,11 @@ class Settings {
     required this.feedsSort,
     required this.categoriesSort,
     required this.entriesSort,
+    required this.pageDuration,
+    required this.showCounts,
+    required this.showReadingTime,
+    required this.showImages,
+    required this.autoSeen,
   });
 
   factory Settings.initial() => Settings(
@@ -54,6 +59,11 @@ class Settings {
     feedsSort: SortOrder.unread,
     categoriesSort: SortOrder.title,
     entriesSort: SortOrder.newest,
+    pageDuration: Duration(hours: 1),
+    showCounts: true,
+    showImages: true,
+    showReadingTime: true,
+    autoSeen: false,
   );
 
   bool get hasApiKey => apiKey.isNotEmpty;
@@ -76,6 +86,11 @@ class Settings {
     SortOrder? categoriesSort,
     SortOrder? entriesSort,
     int? pageSize,
+    Duration? pageDuration,
+    bool? showCounts,
+    bool? showImages,
+    bool? showReadingTime,
+    bool? autoSeen,
   }) => Settings(
     user: user ?? this.user,
     host: host ?? this.host,
@@ -84,6 +99,11 @@ class Settings {
     feedsSort: feedsSort ?? this.feedsSort,
     categoriesSort: categoriesSort ?? this.categoriesSort,
     entriesSort: entriesSort ?? this.entriesSort,
+    pageDuration: pageDuration ?? this.pageDuration,
+    showCounts: showCounts ?? this.showCounts,
+    showImages: showImages ?? this.showImages,
+    showReadingTime: showReadingTime ?? this.showReadingTime,
+    autoSeen: autoSeen ?? this.autoSeen,
   );
 
   factory Settings.fromJson(Map<String, dynamic> json) =>

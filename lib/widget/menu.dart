@@ -15,7 +15,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Cabrillo.  If not, see <https://www.gnu.org/licenses/>.
 
+import 'package:cabrillo/seen/widget.dart';
 import 'package:flutter/material.dart';
+
 import '../cabrillo.dart';
 
 typedef MenuCallback = void Function(BuildContext);
@@ -32,91 +34,126 @@ class PopupItem {
 
   factory PopupItem.divider() => const PopupItem(null, '', null, divider: true);
 
-  const PopupItem(this.icon, this.title, this.onSelected,
-      {this.divider = false, this.subtitle, this.trailing});
+  const PopupItem(
+    this.icon,
+    this.title,
+    this.onSelected, {
+    this.divider = false,
+    this.subtitle,
+    this.trailing,
+  });
 
   PopupItem.reload(BuildContext context, MenuCallback onSelected)
-      : this(const Icon(Icons.refresh_sharp), context.strings.refreshLabel,
-      onSelected);
+    : this(
+        const Icon(Icons.refresh_sharp),
+        context.strings.refreshLabel,
+        onSelected,
+      );
 
   PopupItem.about(BuildContext context, MenuCallback onSelected)
-      : this(const Icon(Icons.info_outline), context.strings.aboutLabel,
-      onSelected);
+    : this(
+        const Icon(Icons.info_outline),
+        context.strings.aboutLabel,
+        onSelected,
+      );
 
   PopupItem.share(BuildContext context, MenuCallback onSelected)
-      : this(const Icon(Icons.share), context.strings.shareLabel,
-      onSelected);
+    : this(const Icon(Icons.share), context.strings.shareLabel, onSelected);
 
   PopupItem.openLink(BuildContext context, MenuCallback onSelected)
-      : this(const Icon(Icons.open_in_new), context.strings.openLinkLabel,
-      onSelected);
+    : this(
+        const Icon(Icons.open_in_new),
+        context.strings.openLinkLabel,
+        onSelected,
+      );
 
   PopupItem.settings(BuildContext context, MenuCallback onSelected)
-      : this(const Icon(Icons.settings), context.strings.settingsLabel,
-      onSelected);
+    : this(
+        const Icon(Icons.settings),
+        context.strings.settingsLabel,
+        onSelected,
+      );
 
-  PopupItem.sortTitle(BuildContext context, MenuCallback onSelected) :
-        this(const Icon(Icons.sort_by_alpha), context.strings.sortTitle,
-          onSelected);
+  PopupItem.sortTitle(BuildContext context, MenuCallback onSelected)
+    : this(
+        const Icon(Icons.sort_by_alpha),
+        context.strings.sortTitle,
+        onSelected,
+      );
 
-  PopupItem.sortUnread(BuildContext context, MenuCallback onSelected) :
-        this(const Icon(Icons.sort), context.strings.sortUnread,
-          onSelected);
+  PopupItem.sortUnread(BuildContext context, MenuCallback onSelected)
+    : this(const Icon(Icons.sort), context.strings.sortUnread, onSelected);
 
-  PopupItem.sortNewest(BuildContext context, MenuCallback onSelected) :
-        this(const Icon(Icons.sort), context.strings.sortNewest,
-          onSelected);
+  PopupItem.sortNewest(BuildContext context, MenuCallback onSelected)
+    : this(const Icon(Icons.sort), context.strings.sortNewest, onSelected);
 
-  PopupItem.sortOldest(BuildContext context, MenuCallback onSelected) :
-        this(const Icon(Icons.sort), context.strings.sortOldest,
-          onSelected);
+  PopupItem.sortOldest(BuildContext context, MenuCallback onSelected)
+    : this(const Icon(Icons.sort), context.strings.sortOldest, onSelected);
+
+  PopupItem.markPageSeen(BuildContext context, MenuCallback onSelected)
+    : this(seenIcon(true), context.strings.markPageReadLabel, onSelected);
 }
 
 Widget popupMenu(BuildContext context, List<PopupItem> items, {Icon? icon}) {
   return PopupMenuButton<int>(
-      icon: icon ?? const Icon(Icons.more_vert),
-      itemBuilder: (_) {
-        List<PopupMenuEntry<int>> entries = [];
-        for (var index = 0; index < items.length; index++) {
-          final subtitle = items[index].subtitle;
-          if (items[index].isDivider) {
-            entries.add(const PopupMenuDivider());
-          } else {
-            entries.add(PopupMenuItem<int>(
-                value: index,
-                child: ListTile(
-                    leading: items[index].icon,
-                    title: Text(items[index].title ?? 'no title'),
-                    subtitle: subtitle != null ? Text(subtitle) : null,
-                    minLeadingWidth: 10)));
-          }
+    icon: icon ?? const Icon(Icons.more_vert),
+    itemBuilder: (_) {
+      List<PopupMenuEntry<int>> entries = [];
+      for (var index = 0; index < items.length; index++) {
+        final subtitle = items[index].subtitle;
+        if (items[index].isDivider) {
+          entries.add(const PopupMenuDivider());
+        } else {
+          entries.add(
+            PopupMenuItem<int>(
+              value: index,
+              child: ListTile(
+                leading: items[index].icon,
+                title: Text(items[index].title ?? 'no title'),
+                subtitle: subtitle != null ? Text(subtitle) : null,
+                minLeadingWidth: 10,
+              ),
+            ),
+          );
         }
-        return entries;
-      },
-      onSelected: (index) {
-        items[index].onSelected?.call(context);
-      });
+      }
+      return entries;
+    },
+    onSelected: (index) {
+      items[index].onSelected?.call(context);
+    },
+  );
 }
 
 void showPopupMenu(
-    BuildContext context, RelativeRect position, List<PopupItem> items) async {
+  BuildContext context,
+  RelativeRect position,
+  List<PopupItem> items,
+) async {
   List<PopupMenuEntry<int>> entries = [];
   for (var index = 0; index < items.length; index++) {
     if (items[index].isDivider) {
       entries.add(const PopupMenuDivider());
     } else {
       final subtitle = items[index].subtitle;
-      entries.add(PopupMenuItem<int>(
+      entries.add(
+        PopupMenuItem<int>(
           value: index,
           child: ListTile(
-              leading: items[index].icon,
-              title: Text(items[index].title ?? 'no title'),
-              subtitle: subtitle != null ? Text(subtitle) : null,
-              minLeadingWidth: 10)));
+            leading: items[index].icon,
+            title: Text(items[index].title ?? 'no title'),
+            subtitle: subtitle != null ? Text(subtitle) : null,
+            minLeadingWidth: 10,
+          ),
+        ),
+      );
     }
   }
-  final selected =
-  await showMenu(context: context, position: position, items: entries);
+  final selected = await showMenu(
+    context: context,
+    position: position,
+    items: entries,
+  );
   if (selected != null) {
     if (!context.mounted) {
       return;

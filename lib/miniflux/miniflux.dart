@@ -110,9 +110,9 @@ class MinifluxCubit extends Cubit<MinifluxState> {
             final read = <int>{};
             final unread = <int>{};
             for (final e in result.iterable) {
-              if (e.isRead()) {
+              if (e.isRead) {
                 read.add(e.id);
-              } else if (e.isUnread()) {
+              } else if (e.isUnread) {
                 unread.add(e.id); // TODO this is out of sync with local
               }
             }

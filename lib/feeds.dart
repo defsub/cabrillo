@@ -16,6 +16,7 @@
 // along with Cabrillo.  If not, see <https://www.gnu.org/licenses/>.
 
 import 'package:cabrillo/counts/counts.dart';
+import 'package:cabrillo/seen/widget.dart';
 import 'package:cabrillo/settings/model.dart';
 import 'package:cabrillo/settings/settings.dart';
 import 'package:cabrillo/util.dart';
@@ -43,7 +44,10 @@ class FeedListWidget extends StatelessWidget {
     final settings = context.watch<SettingsCubit>().state.settings;
     switch (settings.feedsSort) {
       case SortOrder.unread:
-        list.sort((a, b) => counts.entriesUnread(b.id).compareTo(counts.entriesUnread(a.id)));
+        list.sort(
+          (a, b) =>
+              counts.entriesUnread(b.id).compareTo(counts.entriesUnread(a.id)),
+        );
       case SortOrder.title:
         list.sort((a, b) => a.sortTitle.compareTo(b.sortTitle));
       case SortOrder.newest:
@@ -81,8 +85,8 @@ class FeedListWidget extends StatelessWidget {
                           ],
                         ),
                         if (unreadCount == 0)
-                          Icon(Icons.check, size: 16)
-                        else
+                          seenSmallIcon(true)
+                        else if (context.settings.state.settings.showCounts)
                           Text('$unreadCount'),
                       ],
                     ),
@@ -120,6 +124,10 @@ class FeedEntriesWidget extends ClientPage<Entries> {
         title: Text(feed.title),
         actions: [
           popupMenu(context, [
+            PopupItem.markPageSeen(
+              context,
+              (_) => _onMarkSeen(context, state.entries),
+            ),
             PopupItem.reload(context, (_) => reloadPage(context)),
           ]),
         ],
@@ -129,5 +137,9 @@ class FeedEntriesWidget extends ClientPage<Entries> {
         child: EntryListWidget(state.entries, feed: feed),
       ),
     );
+  }
+
+  void _onMarkSeen(BuildContext context, List<Entry> list) {
+    context.markSeen(list);
   }
 }

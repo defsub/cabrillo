@@ -26,12 +26,14 @@ import 'provider.dart';
 
 class ClientRepository {
   final ClientProvider _provider;
+  final SettingsRepository settingsRepository;
 
-  static const defaultTTL = Duration(hours: 1);
+  static const _defaultTTL = Duration(hours: 1);
+  static const _defaultPageSize = 100;
   static const defaultIconTTL = Duration(hours: 24);
 
   ClientRepository({
-    required SettingsRepository settingsRepository,
+    required this.settingsRepository,
     required JsonCacheRepository jsonCacheRepository,
     String? userAgent,
     ClientProvider? provider,
@@ -44,6 +46,12 @@ class ClientRepository {
            );
 
   Client get client => _provider.client;
+
+  Duration get defaultTTL =>
+      settingsRepository.settings?.pageDuration ?? _defaultTTL;
+
+  int get defaultLimit =>
+      settingsRepository.settings?.pageSize ?? _defaultPageSize;
 
   Future<Me> me({Duration? ttl}) => _provider.me(ttl: ttl ?? defaultTTL);
 
@@ -80,12 +88,12 @@ class ClientRepository {
     Direction? dir = defaultDirection,
     Status? status = defaultStatus,
     Order? order = defaultOrder,
-    int? limit = defaultLimit,
+    int? limit,
     Duration? ttl,
   }) => _provider.unread(
     dir: dir,
     order: order,
-    limit: limit,
+    limit: limit ?? defaultLimit,
     ttl: ttl ?? defaultTTL,
   );
 
@@ -94,14 +102,14 @@ class ClientRepository {
     Direction? dir = defaultDirection,
     Status? status = defaultStatus,
     Order? order = defaultOrder,
-    int? limit = defaultLimit,
+    int? limit,
     Duration? ttl,
   }) => _provider.categoryEntries(
     category,
     dir: dir,
     status: status,
     order: order,
-    limit: limit,
+    limit: limit ?? defaultLimit,
     ttl: ttl ?? defaultTTL,
   );
 
@@ -110,14 +118,14 @@ class ClientRepository {
     Direction? dir = defaultDirection,
     Status? status = defaultStatus,
     Order? order = defaultOrder,
-    int? limit = defaultLimit,
+    int? limit,
     Duration? ttl,
   }) => _provider.feedEntries(
     feed,
     dir: dir,
     status: status,
     order: order,
-    limit: limit,
+    limit: limit ?? defaultLimit,
     ttl: ttl ?? defaultTTL,
   );
 

@@ -215,7 +215,9 @@ class Enclosure {
     this.mediaProgression = 0,
   });
 
-  bool get isImage => mimeType.startsWith("image/");
+  bool get isImage => mimeType.startsWith('image/');
+
+  bool get isAudio => mimeType.startsWith('audio/');
 
   factory Enclosure.fromJson(Map<String, dynamic> json) =>
       _$EnclosureFromJson(json);
@@ -250,6 +252,7 @@ class Entry {
   final List<Enclosure>? enclosures;
   final DateTime _date;
   final String _sortTitle;
+  final bool _hasAudio;
 
   Entry({
     required this.id,
@@ -267,11 +270,15 @@ class Entry {
     required this.readingTime,
     required this.feed,
     this.enclosures,
-  }) : _date = parseDate(publishedAt), _sortTitle = _sortableTitle(title);
+  }) : _date = parseDate(publishedAt),
+       _sortTitle = _sortableTitle(title),
+       _hasAudio = enclosures?.any((e) => e.isAudio) ?? false;
 
-  bool isRead() => status == 'read';
+  bool get isRead => status == 'read';
 
-  bool isUnread() => status == 'unread';
+  bool get isUnread => status == 'unread';
+
+  bool get hasAudio => _hasAudio;
 
   DateTime get date => _date;
 
@@ -285,6 +292,22 @@ class Entry {
       return ' ';
     });
     return (parseFragment(result).text ?? '');
+  }
+
+  Uri? _audioUri;
+
+  Uri? get audioUri {
+    if (_audioUri == null) {
+      final list = enclosures;
+      if (list != null) {
+        for (var e in list) {
+          if (e.isAudio) {
+            _audioUri = Uri.parse(e.url);
+          }
+        }
+      }
+    }
+    return _audioUri;
   }
 
   EntryImage? get image {
@@ -337,9 +360,9 @@ class Entries extends EntryList {
 
   Iterable<int> get ids => entries.map((e) => e.id);
 
-  Iterable<Entry> unread() => entries.where((e) => e.isUnread());
+  Iterable<Entry> unread() => entries.where((e) => e.isUnread);
 
-  Iterable<Entry> read() => entries.where((e) => e.isRead());
+  Iterable<Entry> read() => entries.where((e) => e.isRead);
 
   factory Entries.fromJson(Map<String, dynamic> json) =>
       _$EntriesFromJson(json);

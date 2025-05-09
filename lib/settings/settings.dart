@@ -47,6 +47,7 @@ class SettingsCubit extends HydratedCubit<SettingsState> {
     String? apiKey,
     SortOrder? feedSort,
     int? pageSize,
+    Duration? pageDuration,
   }) => emit(
     SettingsState(
       state.settings.copyWith(
@@ -55,6 +56,7 @@ class SettingsCubit extends HydratedCubit<SettingsState> {
         apiKey: apiKey,
         pageSize: pageSize,
         feedsSort: feedSort,
+        pageDuration: pageDuration,
       ),
     ),
   );
@@ -69,6 +71,7 @@ class SettingsCubit extends HydratedCubit<SettingsState> {
           pageSize: settings.pageSize,
           feedsSort: settings.feedsSort,
           categoriesSort: settings.categoriesSort,
+          pageDuration: settings.pageDuration,
         ),
       ),
     );
@@ -100,6 +103,26 @@ class SettingsCubit extends HydratedCubit<SettingsState> {
 
   set entriesSort(SortOrder order) {
     emit(SettingsState(state.settings.copyWith(entriesSort: order)));
+  }
+
+  set pageDuration(Duration ttl) {
+    emit(SettingsState(state.settings.copyWith(pageDuration: ttl)));
+  }
+
+  set showCounts(bool v) {
+    emit(SettingsState(state.settings.copyWith(showCounts: v)));
+  }
+
+  set showImages(bool v) {
+    emit(SettingsState(state.settings.copyWith(showImages: v)));
+  }
+
+  set showReadingTime(bool v) {
+    emit(SettingsState(state.settings.copyWith(showReadingTime: v)));
+  }
+
+  set autoSeen(bool v) {
+    emit(SettingsState(state.settings.copyWith(autoSeen: v)));
   }
 
   @override

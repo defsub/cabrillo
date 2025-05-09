@@ -24,6 +24,8 @@ import 'package:cabrillo/hive/hive_registrar.g.dart';
 import 'package:cabrillo/miniflux/client.dart';
 import 'package:cabrillo/miniflux/model.dart';
 import 'package:cabrillo/miniflux/repository.dart';
+import 'package:cabrillo/player/player.dart';
+import 'package:cabrillo/player/service.dart';
 import 'package:cabrillo/seen/repository.dart';
 import 'package:cabrillo/seen/seen.dart';
 import 'package:cabrillo/settings/repository.dart';
@@ -44,7 +46,7 @@ const appVersion = '0.0.2'; // #version#
 const appSource = 'https://cabrillo.app/';
 const appHome = 'https://cabrillo.app/';
 
-enum NavigationIndex { home, feeds, unread, starred }
+enum NavigationIndex { home, feeds, unread, starred, sync }
 
 class Cabrillo {
   static late Directory _appDir;
@@ -82,6 +84,7 @@ class Cabrillo {
     );
     final starredRepository = StarredRepository(clientRepository);
     final countsRepository = CountsRepository(clientRepository);
+    final playerService = PlayerService();
 
     return [
       RepositoryProvider(create: (_) => settingsRepository),
@@ -89,11 +92,16 @@ class Cabrillo {
       RepositoryProvider(create: (_) => seenRepository),
       RepositoryProvider(create: (_) => starredRepository),
       RepositoryProvider(create: (_) => countsRepository),
+      RepositoryProvider(create: (_) => playerService),
     ];
   }
 
   List<SingleChildWidget> blocs() {
     return [
+      BlocProvider(
+        lazy: false,
+        create: (context) => PlayerCubit(context.read<PlayerService>()),
+      ),
       BlocProvider(
         lazy: false,
         create: (context) {
@@ -139,16 +147,32 @@ class Cabrillo {
 
   List<SingleChildWidget> listeners(BuildContext context) {
     return [
-      BlocListener<SettingsCubit, SettingsState>(
+      BlocListener<PlayerCubit, PlayerState>(
         listener: (context, state) {
-          print(state);
+          if (state is PlayerReady) {
+            context.app.playerReady();
+            if (state.isNotEmpty) {
+              final entry = state.entry;
+              final position = state.position ?? 0;
+              if (entry != null) {
+                context.player.play(entry, position: position);
+              }
+            }
+          } else if (state is PlayerPlay) {
+            final entry = state.entry;
+            if (entry != null) {
+              final playerService = context.playerService;
+              playerService
+                  .playEntry(entry, position: state.position)
+                  .whenComplete(() {
+                    if (state.autoStart) {
+                      playerService.play();
+                    }
+                  });
+            }
+          }
         },
       ),
-      // BlocListener<SeenCubit, SeenState>(
-      //   listener: (context, state) {
-      //     print('read ${state.entries}');
-      //   },
-      // ),
     ];
   }
 }
@@ -166,6 +190,8 @@ extension CabrilloContext on BuildContext {
 
   CountsRepository get countsRepository => read<CountsRepository>();
 
+  PlayerService get playerService => read<PlayerService>();
+
   MinifluxCubit get miniflux => read<MinifluxCubit>();
 
   CountsCubit get counts => read<CountsCubit>();
@@ -175,6 +201,8 @@ extension CabrilloContext on BuildContext {
   StarredCubit get starred => read<StarredCubit>();
 
   SettingsCubit get settings => read<SettingsCubit>();
+
+  PlayerCubit get player => read<PlayerCubit>();
 
   void reload() {
     countsRepository.reload();
@@ -189,18 +217,46 @@ extension CabrilloContext on BuildContext {
       });
     }
   }
+
+  bool get showPlayer => app.state.playerReady && app.state.showPlayer;
+
+  bool enableAutoSeen(Entry entry) {
+    final autoSeen = settings.state.settings.autoSeen;
+    return autoSeen && !entry.hasAudio;
+  }
+
+  void markSeen(List<Entry> list) {
+    final ids = list.map((e) => e.id);
+    seen.addAll(ids);
+  }
 }
 
 class CabrilloState {
   final NavigationIndex index;
   final bool authenticated;
+  final bool showPlayer;
+  final bool playerReady;
 
-  CabrilloState(this.index, this.authenticated);
+  CabrilloState(
+    this.index,
+    this.authenticated, {
+    this.showPlayer = true,
+    this.playerReady = false,
+  });
 
   factory CabrilloState.initial() => CabrilloState(NavigationIndex.home, false);
 
-  CabrilloState copyWith({NavigationIndex? index, bool? authenticated}) =>
-      CabrilloState(index ?? this.index, authenticated ?? this.authenticated);
+  CabrilloState copyWith({
+    NavigationIndex? index,
+    bool? authenticated,
+    bool? showPlayer,
+    bool? playerReady,
+  }) => CabrilloState(
+    index ?? this.index,
+    authenticated ?? this.authenticated,
+    showPlayer: showPlayer ?? this.showPlayer,
+    playerReady: playerReady ?? this.playerReady,
+  );
 
   int get navigationBarIndex => index.index;
 }
@@ -216,12 +272,17 @@ class CabrilloCubit extends Cubit<CabrilloState> {
 
   void unauthenticated() => emit(state.copyWith(authenticated: false));
 
+  void hidePlayer() => emit(state.copyWith(showPlayer: false));
+
+  void showPlayer() => emit(state.copyWith(showPlayer: true));
+
+  void playerReady() => emit(state.copyWith(playerReady: true));
+
   void me() {
     // TODO use fields from Me, store in state
     clientRepository
         .me(ttl: Duration.zero)
         .then((me) {
-          print(me);
           authenticated();
         })
         .onError((e, stack) {

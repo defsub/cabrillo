@@ -16,6 +16,7 @@
 // along with Cabrillo.  If not, see <https://www.gnu.org/licenses/>.
 
 import 'package:cabrillo/counts/counts.dart';
+import 'package:cabrillo/seen/widget.dart';
 import 'package:cabrillo/settings/model.dart';
 import 'package:cabrillo/settings/settings.dart';
 import 'package:cabrillo/settings/widget.dart';
@@ -25,10 +26,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'cabrillo.dart';
 import 'entries.dart';
 import 'feeds.dart';
-import 'widget/menu.dart';
 import 'miniflux/model.dart';
 import 'page.dart';
 import 'push.dart';
+import 'widget/menu.dart';
 
 class CategoriesHomeWidget extends NavigatorClientPage<Categories> {
   CategoriesHomeWidget({super.key});
@@ -40,11 +41,14 @@ class CategoriesHomeWidget extends NavigatorClientPage<Categories> {
 
   @override
   Widget page(BuildContext context, Categories state) {
+    context.watch<SettingsCubit>();
     final counts = context.watch<CountsCubit>().state; // sync
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          '${context.strings.categoriesTitle} (${counts.totalUnread})',
+        title: _title(
+          context,
+          context.strings.categoriesTitle,
+          counts.totalUnread,
         ),
         actions: [
           popupMenu(context, [
@@ -87,10 +91,11 @@ class FeedsHomeWidget extends NavigatorClientPage<Feeds> {
 
   @override
   Widget page(BuildContext context, Feeds state) {
+    context.watch<SettingsCubit>();
     final counts = context.watch<CountsCubit>().state;
     return Scaffold(
       appBar: AppBar(
-        title: Text('${context.strings.feedsTitle} (${counts.totalUnread})'),
+        title: _title(context, context.strings.feedsTitle, counts.totalUnread),
         actions: [
           popupMenu(context, [
             PopupItem.sortTitle(
@@ -159,8 +164,8 @@ class CategoryListWidget extends StatelessWidget {
                       children: [
                         Text(context.strings.feedCount(category.feedCount)),
                         if (unread == 0)
-                          Icon(Icons.check, size: 16)
-                        else
+                          seenSmallIcon(true)
+                        else if (context.settings.state.settings.showCounts)
                           Text('$unread'),
                       ],
                     ),
@@ -198,6 +203,7 @@ class UnreadHomeWidget extends NavigatorClientPage<Entries> {
         actions: [
           _entriesSortMenu(context),
           popupMenu(context, [
+            PopupItem.markPageSeen(context, (_) => _onMarkSeen(context, list)),
             PopupItem.reload(context, (_) => reloadPage(context)),
             PopupItem.settings(context, (_) => _onSettings(context)),
           ]),
@@ -235,6 +241,7 @@ class StarredHomeWidget extends NavigatorClientPage<Entries> {
         actions: [
           _entriesSortMenu(context),
           popupMenu(context, [
+            PopupItem.markPageSeen(context, (_) => _onMarkSeen(context, list)),
             PopupItem.reload(context, (_) => reloadPage(context)),
             PopupItem.settings(context, (_) => _onSettings(context)),
           ]),
@@ -283,4 +290,16 @@ List<Entry> _sortedEntries(Settings settings, Entries state) {
 
 void _onSettings(BuildContext context) {
   push(context, builder: (_) => const SettingsWidget());
+}
+
+Widget _title(BuildContext context, String title, int count) {
+  if (context.settings.state.settings.showCounts) {
+    return Text('$title ($count)');
+  } else {
+    return Text(title);
+  }
+}
+
+void _onMarkSeen(BuildContext context, List<Entry> list) {
+  context.markSeen(list);
 }

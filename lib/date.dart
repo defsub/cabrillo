@@ -37,3 +37,12 @@ DateTime parseDate(dynamic date) {
           : DateTime.parse(date.toString()))
       .toLocal();
 }
+
+String inHoursMinutes(Duration d) {
+  final mins = d.inMinutes.remainder(60);
+  return (d.inHours > 0 && mins > 0)
+      ? '${d.inHours}h ${mins}m'
+      : (d.inHours > 0)
+      ? '${d.inHours}h'
+      : '${mins}m';
+}
