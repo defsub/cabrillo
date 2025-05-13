@@ -15,12 +15,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Cabrillo.  If not, see <https://www.gnu.org/licenses/>.
 
+import 'package:cabrillo/app/context.dart';
 import 'package:cabrillo/miniflux/miniflux.dart';
+import 'package:cabrillo/widget/empty.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-
-import 'cabrillo.dart';
-import 'widget/empty.dart';
 
 abstract mixin class ClientPageBuilder<T> {
   WidgetBuilder builder(BuildContext context, {T? value}) {

@@ -15,33 +15,33 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Cabrillo.  If not, see <https://www.gnu.org/licenses/>.
 
+import 'package:cabrillo/app/app.dart';
+import 'package:cabrillo/app/bloc.dart';
+import 'package:cabrillo/app/context.dart';
+import 'package:cabrillo/log/basic_printer.dart';
+import 'package:cabrillo/pages/home.dart';
+import 'package:cabrillo/pages/push.dart';
 import 'package:cabrillo/player/widget.dart';
 import 'package:cabrillo/seen/seen.dart';
 import 'package:cabrillo/settings/widget.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart' show BlocBuilder, WatchContext;
+import 'package:flutter_bloc/flutter_bloc.dart' show WatchContext;
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'package:logger/logger.dart';
 import 'package:relative_time/relative_time.dart';
 
-import 'cabrillo.dart';
-import 'home.dart';
-import 'log/basic_printer.dart';
-import 'push.dart';
-
 void main() async {
   // setup the logger
-  Logger.level = Level.error;
+  Logger.level = Level.debug;
   Logger.defaultFilter = () => ProductionFilter();
   Logger.defaultPrinter = () => BasicPrinter();
 
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Cabrillo.initStorage();
+  await AppBloc.initStorage();
 
   runApp(const CabrilloApp());
 }
@@ -52,7 +52,7 @@ class CabrilloApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return Cabrillo().init(
+    return AppBloc().init(
       context,
       child: DynamicColorBuilder(
         builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
@@ -98,8 +98,6 @@ class _CabrilloWidget extends StatefulWidget {
 }
 
 class __CabrilloWidgetState extends State<_CabrilloWidget> {
-  static final _routes = ['/home', '/feeds', '/unread', '/starred'];
-
   static final _navigatorKeys = {
     NavigationIndex.home: GlobalKey<NavigatorState>(),
     NavigationIndex.feeds: GlobalKey<NavigatorState>(),
@@ -107,9 +105,21 @@ class __CabrilloWidgetState extends State<_CabrilloWidget> {
     NavigationIndex.starred: GlobalKey<NavigatorState>(),
   };
 
+  NavigationIndex currentIndex = NavigationIndex.home;
+  bool showPlayer = false;
+  List<Widget> pages = [];
+
   @override
   void initState() {
     super.initState();
+
+    pages = [
+      CategoriesHomeWidget(key: _navigatorKeys[NavigationIndex.home]),
+      FeedsHomeWidget(key: _navigatorKeys[NavigationIndex.feeds]),
+      UnreadHomeWidget(key: _navigatorKeys[NavigationIndex.unread]),
+      StarredHomeWidget(key: _navigatorKeys[NavigationIndex.starred]),
+    ];
+
     if (context.settings.hasApiKey) {
       // assume authenticated if there's an api key
       context.app.authenticated();
@@ -122,16 +132,9 @@ class __CabrilloWidgetState extends State<_CabrilloWidget> {
 
   void _onNavTapped(BuildContext context, int index) {
     if (index == NavigationIndex.sync.index) {
-      Fluttertoast.showToast(
-        msg: context.strings.syncCount(context.seenRepository.count),
-      );
       context.sync();
-      return;
-    }
-
-    final currentIndex = context.app.state.navigationBarIndex;
-    if (currentIndex == index) {
-      NavigatorState? navState = _navigatorState(context.app.state.index);
+    } else if (index == currentIndex.index) {
+      NavigatorState? navState = _navigatorState(currentIndex);
       if (navState != null && navState.canPop()) {
         navState.popUntil((route) => route.isFirst);
       }
@@ -142,8 +145,8 @@ class __CabrilloWidgetState extends State<_CabrilloWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<CabrilloCubit>().state;
-    if (state.authenticated == false) {
+    final state = context.watch<AppCubit>().state;
+    if (state is AppNotAuthenticated) {
       return Scaffold(
         appBar: AppBar(title: Text(context.strings.minifluxSettings)),
         body: Column(
@@ -163,19 +166,26 @@ class __CabrilloWidgetState extends State<_CabrilloWidget> {
           ],
         ),
       );
+    } else if (state is AppInitial) {
+      currentIndex = state.index;
+    } else if (state is AppNavChange) {
+      currentIndex = state.index;
+    } else if (state is AppShowPlayer) {
+      showPlayer = true;
+    } else if (state is AppHidePlayer) {
+      showPlayer = false;
     }
 
-    final navIndex = context.app.state.index;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) {
           return;
         }
-        NavigatorState? navState = _navigatorState(navIndex);
+        NavigatorState? navState = _navigatorState(currentIndex);
         if (navState != null) {
           final handled = await navState.maybePop();
-          if (!handled && navIndex == NavigationIndex.home) {
+          if (!handled && currentIndex == NavigationIndex.home) {
             // allow pop and app to exit
             await SystemNavigator.pop();
           }
@@ -190,18 +200,12 @@ class __CabrilloWidgetState extends State<_CabrilloWidget> {
   }
 
   Widget _body(BuildContext context) {
-    final state = context.app.state;
-    final builders = _pageBuilders();
-    final pages = List.generate(
-      _routes.length,
-      (index) => builders[_routes[index]]!(context),
-    );
     return Column(
       children: [
         Expanded(
-          child: IndexedStack(index: state.navigationBarIndex, children: pages),
+          child: IndexedStack(index: currentIndex.index, children: pages),
         ),
-        if (context.showPlayer)
+        if (showPlayer)
           Dismissible(
             key: UniqueKey(),
             child: Card(
@@ -233,44 +237,39 @@ class __CabrilloWidgetState extends State<_CabrilloWidget> {
   Widget _bottomNavigation() {
     return Stack(
       children: [
-        BlocBuilder<CabrilloCubit, CabrilloState>(
-          builder: (context, state) {
-            final index = state.navigationBarIndex;
-            return BottomNavigationBar(
-              showUnselectedLabels: false,
-              showSelectedLabels: false,
-              type: BottomNavigationBarType.fixed,
-              items: <BottomNavigationBarItem>[
-                BottomNavigationBarItem(
-                  icon: const Icon(Icons.home),
-                  label: context.strings.navHome,
-                ),
-                BottomNavigationBarItem(
-                  icon: const Icon(Icons.rss_feed),
-                  label: context.strings.navFeeds,
-                ),
-                BottomNavigationBarItem(
-                  icon: const Icon(Icons.feed),
-                  label: context.strings.navEntries,
-                ),
-                BottomNavigationBarItem(
-                  icon: const Icon(Icons.star),
-                  label: context.strings.navStarred,
-                ),
-                BottomNavigationBarItem(
-                  icon: _syncIcon(context),
-                  label: context.strings.navSync,
-                ),
-              ],
-              currentIndex: index,
-              onTap: (index) => _onNavTapped(context, index),
-            );
-          },
+        BottomNavigationBar(
+          showUnselectedLabels: false,
+          showSelectedLabels: false,
+          type: BottomNavigationBarType.fixed,
+          items: <BottomNavigationBarItem>[
+            BottomNavigationBarItem(
+              icon: const Icon(Icons.home),
+              label: context.strings.navHome,
+            ),
+            BottomNavigationBarItem(
+              icon: const Icon(Icons.rss_feed),
+              label: context.strings.navFeeds,
+            ),
+            BottomNavigationBarItem(
+              icon: const Icon(Icons.feed),
+              label: context.strings.navEntries,
+            ),
+            BottomNavigationBarItem(
+              icon: const Icon(Icons.star),
+              label: context.strings.navStarred,
+            ),
+            BottomNavigationBarItem(
+              icon: _syncIcon(context),
+              label: context.strings.navSync,
+            ),
+          ],
+          currentIndex: currentIndex.index,
+          onTap: (index) => _onNavTapped(context, index),
         ),
       ],
     );
   }
-  
+
   Widget _syncIcon(BuildContext context) {
     final state = context.watch<SeenCubit>().state;
     final count = state.count;
@@ -278,21 +277,5 @@ class __CabrilloWidgetState extends State<_CabrilloWidget> {
       return Icon(Icons.sync);
     }
     return Badge(label: Text('${state.count}'), child: Icon(Icons.sync));
-  }
-
-  Map<String, WidgetBuilder> _pageBuilders() {
-    final builders = {
-      '/home':
-          (_) =>
-              CategoriesHomeWidget(key: _navigatorKeys[NavigationIndex.home]),
-      '/feeds':
-          (_) => FeedsHomeWidget(key: _navigatorKeys[NavigationIndex.feeds]),
-      '/unread':
-          (_) => UnreadHomeWidget(key: _navigatorKeys[NavigationIndex.unread]),
-      '/starred':
-          (_) =>
-              StarredHomeWidget(key: _navigatorKeys[NavigationIndex.starred]),
-    };
-    return builders;
   }
 }

@@ -27,7 +27,11 @@ import 'json_repository.dart';
 abstract class JsonCacheProvider {
   Future<void> put(String uri, Uint8List body);
 
-  Future<JsonCacheResult> get(String uri, {Duration? ttl});
+  Future<JsonCacheResult> get(
+    String uri, {
+    Duration? ttl,
+    DateTime? referenceTime,
+  });
 
   Future<void> invalidate(String uri);
 }
@@ -83,14 +87,21 @@ class HiveJsonCache implements JsonCacheProvider {
   }
 
   @override
-  Future<JsonCacheResult> get(String uri, {Duration? ttl}) async {
+  Future<JsonCacheResult> get(
+    String uri, {
+    Duration? ttl,
+    DateTime? referenceTime,
+  }) async {
     await _initialized;
     final cache = box.get(uri);
     // log.d('get $uri -> ${cache?.data.length ?? 0} ${cache?.lastModified} $ttl');
     if (cache != null) {
       final lastModified = cache.lastModified;
       var expired = false;
-      if (ttl != null) {
+      if (referenceTime != null) {
+        // older that ref time means expired
+        expired = referenceTime.isAfter(lastModified);
+      } else if (ttl != null) {
         final expirationTime = lastModified.add(ttl);
         expired = DateTime.now().isAfter(expirationTime);
       }

@@ -15,8 +15,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Cabrillo.  If not, see <https://www.gnu.org/licenses/>.
 
-import 'package:cabrillo/cabrillo.dart';
-import 'package:cabrillo/date.dart';
+import 'package:cabrillo/app/context.dart';
+import 'package:cabrillo/util/date.dart';
 import 'package:cabrillo/seen/widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -55,7 +55,7 @@ class SettingsWidget extends StatelessWidget {
                         seenIconData(true),
                         context.strings.settingAutoSeen,
                         state.settings.autoSeen,
-                            (value) => context.settings.autoSeen = value,
+                        (value) => context.settings.autoSeen = value,
                       ),
                       _switchTile(
                         Icons.numbers,
@@ -73,7 +73,7 @@ class SettingsWidget extends StatelessWidget {
                         Icons.hourglass_bottom,
                         context.strings.settingShowReadingTime,
                         state.settings.showReadingTime,
-                            (value) => context.settings.showReadingTime = value,
+                        (value) => context.settings.showReadingTime = value,
                       ),
                       ListTile(
                         leading: const Icon(Icons.timer_outlined),

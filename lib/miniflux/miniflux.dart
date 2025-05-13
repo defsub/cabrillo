@@ -79,6 +79,7 @@ class MinifluxCubit extends Cubit<MinifluxState> {
   void starred({Duration? ttl, Status? status}) => _doit<Entries>(
     ({Duration? ttl}) => clientRepository.starred(ttl: ttl, status: status),
     ttl: ttl,
+    status: status,
   );
 
   void unread({Duration? ttl}) => _doit<Entries>(
@@ -86,36 +87,82 @@ class MinifluxCubit extends Cubit<MinifluxState> {
     ttl: ttl,
   );
 
-  void categoryEntries(Category category, {Duration? ttl}) => _doit<Entries>(
-    ({Duration? ttl}) => clientRepository.categoryEntries(category, ttl: ttl),
-    ttl: ttl,
-  );
+  void categoryEntries(Category category, {Duration? ttl, Status? status}) =>
+      _doit<Entries>(
+        ({Duration? ttl}) => clientRepository.categoryEntries(
+          category,
+          ttl: ttl,
+          status: status,
+        ),
+        ttl: ttl,
+        status: status,
+      );
 
-  void feedEntries(Feed feed, {Duration? ttl}) => _doit<Entries>(
-    ({Duration? ttl}) => clientRepository.feedEntries(feed, ttl: ttl),
-    ttl: ttl,
-  );
+  void feedEntries(Feed feed, {Duration? ttl, Status? status}) =>
+      _doit<Entries>(
+        ({Duration? ttl}) =>
+            clientRepository.feedEntries(feed, ttl: ttl, status: status),
+        ttl: ttl,
+        status: status,
+      );
+
+  void search(String query, {Duration? ttl, Category? category, Feed? feed}) {
+    MinifluxRequest<Entries> call;
+    final status = null;
+    if (category != null) {
+      call =
+          ({Duration? ttl}) => clientRepository.categoryEntries(
+            category,
+            ttl: ttl,
+            status: status,
+            query: query,
+          );
+    } else if (feed != null) {
+      call =
+          ({Duration? ttl}) => clientRepository.feedEntries(
+            feed,
+            ttl: ttl,
+            status: status,
+            query: query,
+          );
+    } else {
+      call =
+          ({Duration? ttl}) =>
+              clientRepository.entries(ttl: ttl, status: status, query: query);
+    }
+    _doit<Entries>(call, ttl: ttl, status: status);
+  }
 
   void counts({Duration? ttl}) => _doit<Counts>(
     ({Duration? ttl}) => clientRepository.counts(ttl: ttl),
     ttl: ttl,
   );
 
-  Future<void> _doit<T>(MinifluxRequest<T> call, {Duration? ttl}) async {
+  Future<void> _doit<T>(
+    MinifluxRequest<T> call, {
+    Status? status,
+    Duration? ttl,
+  }) async {
     emit(MinifluxLoading());
     return call(ttl: ttl)
         .timeout(_timeout)
         .then((T result) {
-          if (result is EntryList) {
+          if (result is EntryList && status == Status.unread) {
+            // Status.read means treat all as read from the server
+            // so no need to do anything here
             final read = <int>{};
             final unread = <int>{};
             for (final e in result.iterable) {
               if (e.isRead) {
                 read.add(e.id);
               } else if (e.isUnread) {
-                unread.add(e.id); // TODO this is out of sync with local
+                unread.add(e.id);
               }
             }
+            // remove any new unreads that are in the current un-synced state
+            unread.removeAll(seenRepository.entries);
+
+            print('update read=${read.length} unread=${unread.length}');
             seenRepository.update(read, unread);
           }
           return emit(MinifluxResult<T>(result));

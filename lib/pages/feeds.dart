@@ -15,22 +15,24 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Cabrillo.  If not, see <https://www.gnu.org/licenses/>.
 
+import 'package:cabrillo/app/context.dart';
 import 'package:cabrillo/counts/counts.dart';
+import 'package:cabrillo/miniflux/model.dart';
+import 'package:cabrillo/miniflux/provider.dart';
+import 'package:cabrillo/pages/search.dart';
 import 'package:cabrillo/seen/widget.dart';
 import 'package:cabrillo/settings/model.dart';
 import 'package:cabrillo/settings/settings.dart';
-import 'package:cabrillo/util.dart';
+import 'package:cabrillo/util/date.dart';
+import 'package:cabrillo/util/merge.dart';
+import 'package:cabrillo/widget/image.dart';
+import 'package:cabrillo/widget/menu.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'cabrillo.dart';
-import 'date.dart';
 import 'entries.dart';
-import 'miniflux/model.dart';
 import 'page.dart';
 import 'push.dart';
-import 'widget/image.dart';
-import 'widget/menu.dart';
 
 class FeedListWidget extends StatelessWidget {
   final List<Feed> _feeds;
@@ -66,7 +68,6 @@ class FeedListWidget extends StatelessWidget {
               return Column(
                 children: [
                   ListTile(
-                    // enabled: counts.unread(feed.id) > 0,
                     onTap: () => _onFeed(context, feed),
                     title: Text(feed.title),
                     subtitle: Row(
@@ -85,7 +86,7 @@ class FeedListWidget extends StatelessWidget {
                           ],
                         ),
                         if (unreadCount == 0)
-                          seenSmallIcon(true)
+                          readSmallIcon()
                         else if (context.settings.state.settings.showCounts)
                           Text('$unreadCount'),
                       ],
@@ -102,18 +103,26 @@ class FeedListWidget extends StatelessWidget {
   }
 
   void _onFeed(BuildContext context, Feed feed) {
-    push(context, builder: (_) => FeedEntriesWidget(feed));
+    final unreadCount = context.counts.state.entriesUnread(feed.id);
+    final status = (unreadCount > 0) ? Status.unread : Status.read;
+    push(context, builder: (_) => FeedEntriesWidget(feed, status));
   }
 }
 
 class FeedEntriesWidget extends ClientPage<Entries> {
   final Feed feed;
+  final Status status;
 
-  FeedEntriesWidget(this.feed, {super.key});
+  FeedEntriesWidget(this.feed, this.status, {super.key});
 
   @override
   void load(BuildContext context, {Duration? ttl}) {
-    context.miniflux.feedEntries(feed, ttl: ttl);
+    context.miniflux.feedEntries(feed, ttl: ttl, status: status);
+  }
+
+  @override
+  Future<void> reloadPage(BuildContext context) async {
+    super.reloadPage(context);
     context.reload();
   }
 
@@ -123,23 +132,32 @@ class FeedEntriesWidget extends ClientPage<Entries> {
       appBar: AppBar(
         title: Text(feed.title),
         actions: [
+          IconButton(
+            icon: Icon(Icons.search),
+            onPressed: () => _onSearch(context),
+          ),
           popupMenu(context, [
-            PopupItem.markPageSeen(
-              context,
-              (_) => _onMarkSeen(context, state.entries),
-            ),
+            if (status == Status.unread)
+              PopupItem.markPageSeen(
+                context,
+                (_) => _onMarkSeen(context, state.entries),
+              ),
             PopupItem.reload(context, (_) => reloadPage(context)),
           ]),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: () => reloadPage(context),
-        child: EntryListWidget(state.entries, feed: feed),
+        child: EntryListWidget(state.entries, status: status, feed: feed),
       ),
     );
   }
 
   void _onMarkSeen(BuildContext context, List<Entry> list) {
     context.markSeen(list);
+  }
+
+  void _onSearch(BuildContext context) {
+    push(context, builder: (_) => SearchWidget(feed: feed));
   }
 }

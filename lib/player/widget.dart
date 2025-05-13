@@ -18,12 +18,13 @@
 // Originally based on just_audio example code.
 
 import 'package:audio_service/audio_service.dart';
-import 'package:cabrillo/cabrillo.dart';
-import 'package:cabrillo/date.dart';
+import 'package:cabrillo/app/context.dart';
+import 'package:cabrillo/util/date.dart';
 import 'package:cabrillo/player/player.dart';
-import 'package:cabrillo/util.dart';
+import 'package:cabrillo/util/merge.dart';
 import 'package:cabrillo/widget/empty.dart';
 import 'package:cabrillo/widget/image.dart';
+import 'package:cabrillo/widget/menu.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -85,10 +86,25 @@ class PlayerWidgetState extends State<PlayerWidget>
         mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            entry.title,
-            style: Theme.of(context).textTheme.titleMedium,
-            overflow: TextOverflow.ellipsis,
+          Row(
+            spacing: 0,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Flexible(
+                child: Text(
+                  entry.title,
+                  style: Theme.of(context).textTheme.titleMedium,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              popupMenu(context, [
+                PopupItem.markListened(
+                  context,
+                  (context) => context.seen.add(entry.id),
+                ),
+                PopupItem.clear(context, (context) => context.player.stop()),
+              ]),
+            ],
           ),
           Row(
             spacing: 6,

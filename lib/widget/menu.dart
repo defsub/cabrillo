@@ -15,10 +15,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Cabrillo.  If not, see <https://www.gnu.org/licenses/>.
 
+import 'package:cabrillo/app/context.dart';
 import 'package:cabrillo/seen/widget.dart';
 import 'package:flutter/material.dart';
-
-import '../cabrillo.dart';
 
 typedef MenuCallback = void Function(BuildContext);
 
@@ -74,6 +73,9 @@ class PopupItem {
         onSelected,
       );
 
+  PopupItem.search(BuildContext context, MenuCallback onSelected)
+    : this(const Icon(Icons.search), context.strings.searchLabel, onSelected);
+
   PopupItem.sortTitle(BuildContext context, MenuCallback onSelected)
     : this(
         const Icon(Icons.sort_by_alpha),
@@ -92,6 +94,15 @@ class PopupItem {
 
   PopupItem.markPageSeen(BuildContext context, MenuCallback onSelected)
     : this(seenIcon(true), context.strings.markPageReadLabel, onSelected);
+
+  PopupItem.markSeen(BuildContext context, MenuCallback onSelected)
+    : this(seenIcon(true), context.strings.markSeenLabel, onSelected);
+
+  PopupItem.markListened(BuildContext context, MenuCallback onSelected)
+    : this(seenIcon(true), context.strings.markListenedLabel, onSelected);
+
+  PopupItem.clear(BuildContext context, MenuCallback onSelected)
+    : this(const Icon(Icons.clear), context.strings.clearLabel, onSelected);
 }
 
 Widget popupMenu(BuildContext context, List<PopupItem> items, {Icon? icon}) {

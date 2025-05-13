@@ -16,6 +16,7 @@
 // along with Cabrillo.  If not, see <https://www.gnu.org/licenses/>.
 
 import 'package:cabrillo/cache/json_repository.dart';
+import 'package:cabrillo/seen/repository.dart';
 import 'package:cabrillo/settings/repository.dart';
 import 'package:cabrillo/state/entry.dart';
 import 'package:http/http.dart';
@@ -23,6 +24,10 @@ import 'package:http/http.dart';
 import 'client.dart';
 import 'model.dart';
 import 'provider.dart';
+
+const defaultDirection = Direction.desc;
+const defaultStatus = Status.unread;
+const defaultOrder = Order.publishedAt;
 
 class ClientRepository {
   final ClientProvider _provider;
@@ -35,12 +40,14 @@ class ClientRepository {
   ClientRepository({
     required this.settingsRepository,
     required JsonCacheRepository jsonCacheRepository,
+    required SeenRepository seenRepository,
     String? userAgent,
     ClientProvider? provider,
   }) : _provider =
            provider ??
            MinifluxClient(
              userAgent: userAgent,
+             seenRepository: seenRepository,
              jsonCacheRepository: jsonCacheRepository,
              settingsRepository: settingsRepository,
            );
@@ -97,6 +104,21 @@ class ClientRepository {
     ttl: ttl ?? defaultTTL,
   );
 
+  Future<Entries> entries({
+    Direction? dir = defaultDirection,
+    Status? status = defaultStatus,
+    Order? order = defaultOrder,
+    int? limit,
+    Duration? ttl,
+    String? query,
+  }) => _provider.entries(
+    dir: dir,
+    order: order,
+    limit: limit ?? defaultLimit,
+    ttl: ttl ?? defaultTTL,
+    query: query,
+  );
+
   Future<Entries> categoryEntries(
     Category category, {
     Direction? dir = defaultDirection,
@@ -104,6 +126,7 @@ class ClientRepository {
     Order? order = defaultOrder,
     int? limit,
     Duration? ttl,
+    String? query,
   }) => _provider.categoryEntries(
     category,
     dir: dir,
@@ -111,6 +134,7 @@ class ClientRepository {
     order: order,
     limit: limit ?? defaultLimit,
     ttl: ttl ?? defaultTTL,
+    query: query,
   );
 
   Future<Entries> feedEntries(
@@ -120,6 +144,7 @@ class ClientRepository {
     Order? order = defaultOrder,
     int? limit,
     Duration? ttl,
+    String? query,
   }) => _provider.feedEntries(
     feed,
     dir: dir,
@@ -127,6 +152,7 @@ class ClientRepository {
     order: order,
     limit: limit ?? defaultLimit,
     ttl: ttl ?? defaultTTL,
+    query: query,
   );
 
   Future<void> toggle(int id) => _provider.toggle(id);

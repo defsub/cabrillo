@@ -18,7 +18,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:cabrillo/date.dart';
+import 'package:cabrillo/util/date.dart';
 import 'package:cabrillo/miniflux/provider.dart';
 import 'package:html/parser.dart';
 import 'package:json_annotation/json_annotation.dart';
@@ -354,6 +354,8 @@ class Entries extends EntryList {
   final List<Entry> entries;
 
   Entries({required this.total, required this.entries});
+
+  factory Entries.empty() => Entries(total: 0, entries: []);
 
   @override
   Iterable<Entry> get iterable => entries;

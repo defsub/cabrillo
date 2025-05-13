@@ -15,11 +15,16 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Cabrillo.  If not, see <https://www.gnu.org/licenses/>.
 
+import 'package:cabrillo/app/context.dart';
 import 'package:cabrillo/miniflux/model.dart';
+import 'package:cabrillo/miniflux/provider.dart';
+import 'package:cabrillo/pages/page.dart';
+import 'package:cabrillo/pages/search.dart';
 import 'package:cabrillo/seen/widget.dart';
 import 'package:cabrillo/settings/settings.dart';
 import 'package:cabrillo/starred/widget.dart';
-import 'package:cabrillo/util.dart';
+import 'package:cabrillo/util/date.dart';
+import 'package:cabrillo/util/merge.dart';
 import 'package:cabrillo/widget/image.dart';
 import 'package:cabrillo/widget/menu.dart';
 import 'package:flutter/material.dart';
@@ -29,19 +34,17 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
-import 'cabrillo.dart';
-import 'date.dart';
-import 'page.dart';
 import 'push.dart';
 
 class CategoryEntriesWidget extends ClientPage<Entries> {
   final Category category;
+  final Status status;
 
-  CategoryEntriesWidget(this.category, {super.key});
+  CategoryEntriesWidget(this.category, this.status, {super.key});
 
   @override
   void load(BuildContext context, {Duration? ttl}) {
-    context.miniflux.categoryEntries(category, ttl: ttl);
+    context.miniflux.categoryEntries(category, ttl: ttl, status: status);
   }
 
   @override
@@ -50,6 +53,10 @@ class CategoryEntriesWidget extends ClientPage<Entries> {
       appBar: AppBar(
         title: Text(category.title),
         actions: [
+          IconButton(
+            icon: Icon(Icons.search),
+            onPressed: () => _onSearch(context),
+          ),
           popupMenu(context, [
             PopupItem.reload(context, (_) => reloadPage(context)),
           ]),
@@ -57,7 +64,11 @@ class CategoryEntriesWidget extends ClientPage<Entries> {
       ),
       body: RefreshIndicator(
         onRefresh: () => reloadPage(context),
-        child: EntryListWidget(state.entries, category: category),
+        child: EntryListWidget(
+          state.entries,
+          status: status,
+          category: category,
+        ),
       ),
     );
   }
@@ -67,14 +78,25 @@ class CategoryEntriesWidget extends ClientPage<Entries> {
     super.reloadPage(context);
     context.reload();
   }
+
+  void _onSearch(BuildContext context) {
+    push(context, builder: (_) => SearchWidget(category: category));
+  }
 }
 
 class EntryListWidget extends StatelessWidget {
   final List<Entry> _entries;
   final Category? category;
   final Feed? feed;
+  final Status? status;
 
-  const EntryListWidget(this._entries, {super.key, this.feed, this.category});
+  const EntryListWidget(
+    this._entries, {
+    super.key,
+    this.feed,
+    this.status,
+    this.category,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -82,42 +104,47 @@ class EntryListWidget extends StatelessWidget {
     final screen = MediaQuery.of(context).size;
     final w = screen.width / 4;
     final h = w / 1.25;
-    return Column(
-      children: [
-        Expanded(
-          child: ListView.builder(
-            itemCount: _entries.length,
-            itemBuilder: (buildContext, index) {
-              final entry = _entries[index];
-              final tile = EntryTileWidget(
-                entry,
-                category: category,
-                feed: feed,
-                size: Size(w, h),
-              );
-              if (context.enableAutoSeen(entry)) {
-                return VisibilityDetector(
-                  key: Key('EntryTile-${entry.id}'),
-                  onVisibilityChanged: (state) {
-                    if (state.visibleFraction > 0.9) {
-                      context.seen.add(entry.id);
-                    }
-                  },
-                  child: tile,
+    return Container(
+      padding: EdgeInsets.fromLTRB(0, 16, 0, 0),
+      child: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              itemCount: _entries.length,
+              itemBuilder: (buildContext, index) {
+                final entry = _entries[index];
+                final tile = EntryTileWidget(
+                  entry,
+                  status: status,
+                  category: category,
+                  feed: feed,
+                  size: Size(w, h),
                 );
-              } else {
-                return tile;
-              }
-            },
+                if (context.enableAutoSeen(status, entry)) {
+                  return VisibilityDetector(
+                    key: Key('EntryTile-${entry.id}'),
+                    onVisibilityChanged: (state) {
+                      if (state.visibleFraction > 0.9) {
+                        context.seen.add(entry.id);
+                      }
+                    },
+                    child: tile,
+                  );
+                } else {
+                  return tile;
+                }
+              },
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
 
 class EntryTileWidget extends StatelessWidget {
   final Entry entry;
+  final Status? status;
   final Category? category;
   final Feed? feed;
   final Size? size;
@@ -125,6 +152,7 @@ class EntryTileWidget extends StatelessWidget {
   const EntryTileWidget(
     this.entry, {
     super.key,
+    this.status,
     this.category,
     this.feed,
     this.size,
@@ -187,7 +215,10 @@ class EntryTileWidget extends StatelessWidget {
                   spacing: 16,
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    seenSmallIconButton(context, entry),
+                    if (status == Status.unread)
+                      seenSmallIconButton(context, entry)
+                    else
+                      readSmallIcon(),
                     starredSmallIconButton(context, entry),
                   ],
                 ),
@@ -203,17 +234,30 @@ class EntryTileWidget extends StatelessWidget {
   void _onEntry(BuildContext context, Entry entry) {
     push(
       context,
-      builder: (_) => EntryWidget(entry, category: category, feed: feed),
+      builder:
+          (_) => EntryWidget(
+            entry,
+            status: status,
+            category: category,
+            feed: feed,
+          ),
     );
   }
 }
 
 class EntryWidget extends StatelessWidget {
   final Entry entry;
+  final Status? status;
   final Category? category;
   final Feed? feed;
 
-  const EntryWidget(this.entry, {super.key, this.category, this.feed});
+  const EntryWidget(
+    this.entry, {
+    super.key,
+    this.status,
+    this.category,
+    this.feed,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -247,12 +291,15 @@ class EntryWidget extends StatelessWidget {
                     if (entry.hasAudio)
                       IconButton(
                         onPressed: () {
-                          context.player.play(entry, autoStart:true);
+                          context.player.play(entry, autoStart: true);
                           context.app.showPlayer();
                         },
                         icon: Icon(Icons.play_arrow),
                       ),
-                    seenIconButton(context, entry),
+                    if (status == Status.unread)
+                      seenIconButton(context, entry)
+                    else
+                      readIcon(),
                     starredIconButton(context, entry),
                   ],
                 ),
@@ -274,10 +321,16 @@ class EntryWidget extends StatelessWidget {
               ),
             ),
             if (entryImage != null && entryImage.isEnclosure)
-              mainImage(entryImage.url),
+              mainImage(context, entryImage.url),
             Container(
               padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
-              child: HtmlWidget(entry.content),
+              child: HtmlWidget(
+                entry.content,
+                onTapImage: (img) {
+                  showImage(context, img.sources.first.url);
+                },
+                onTapUrl: (url) => launchUrl(Uri.parse(url)),
+              ),
             ),
           ],
         ),

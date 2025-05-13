@@ -1,7 +1,7 @@
 name: cabrillo
 description: "Cabrillo - Miniflux RSS reader"
 publish_to: 'none'
-version: "0.0.3" #version#
+version: "0.0.4" #version#
 
 environment:
   sdk: ^3.7.2
@@ -19,6 +19,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   bloc: ^9.0.0
   dynamic_color: ^1.7.0
+  easy_image_viewer: ^1.5.1
   flutter_bloc: ^9.0.0
   flutter_widget_from_html: ^0.16.0
   flutter_cache_manager: ^3.3.2

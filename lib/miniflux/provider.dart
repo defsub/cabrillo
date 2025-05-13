@@ -20,12 +20,10 @@ import 'package:http/http.dart';
 import 'model.dart';
 
 enum Direction { asc, desc }
-enum Status { read, unread, removed }
-enum Order { id, status, publishedAt, categoryTitle, categoryId }
 
-const defaultDirection = Direction.desc;
-const defaultStatus = Status.unread;
-const defaultOrder = Order.publishedAt;
+enum Status { read, unread, removed }
+
+enum Order { id, status, publishedAt, categoryTitle, categoryId }
 
 abstract class ClientProvider {
   Client get client;
@@ -55,6 +53,15 @@ abstract class ClientProvider {
     Duration? ttl,
   });
 
+  Future<Entries> entries({
+    Direction? dir,
+    Status? status,
+    Order? order,
+    int? limit,
+    Duration? ttl,
+    String? query,
+  });
+
   Future<Entries> categoryEntries(
     Category category, {
     Direction? dir,
@@ -62,16 +69,18 @@ abstract class ClientProvider {
     Order? order,
     int? limit,
     Duration? ttl,
+    String? query,
   });
 
   Future<Entries> feedEntries(
-      Feed feed, {
-        Direction? dir,
-        Status? status,
-        Order? order,
-        int? limit,
-        Duration? ttl,
-      });
+    Feed feed, {
+    Direction? dir,
+    Status? status,
+    Order? order,
+    int? limit,
+    Duration? ttl,
+    String? query,
+  });
 
   Future<void> toggle(int id);
 

@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Cabrillo.  If not, see <https://www.gnu.org/licenses/>.
 
-import 'package:cabrillo/cabrillo.dart';
+import 'package:cabrillo/app/context.dart';
 import 'package:cabrillo/miniflux/model.dart';
 import 'package:cabrillo/widget/button.dart';
 import 'package:flutter/material.dart';

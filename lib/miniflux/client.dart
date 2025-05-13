@@ -22,6 +22,7 @@ import 'dart:io';
 
 import 'package:cabrillo/cache/json_repository.dart';
 import 'package:cabrillo/miniflux/model.dart';
+import 'package:cabrillo/seen/repository.dart';
 import 'package:cabrillo/settings/repository.dart';
 import 'package:change_case/change_case.dart';
 import 'package:http/http.dart' as http;
@@ -86,12 +87,14 @@ class MinifluxClient implements ClientProvider {
 
   final SettingsRepository settingsRepository;
   final JsonCacheRepository jsonCacheRepository;
+  final SeenRepository seenRepository;
   final String _userAgent;
   late http.Client _client;
 
   MinifluxClient({
     required this.settingsRepository,
     required this.jsonCacheRepository,
+    required this.seenRepository,
     String? userAgent,
   }) : _userAgent = userAgent ?? 'Cabrillo-App' {
     _client = _ClientWithUserAgent(http.Client(), _userAgent);
@@ -151,7 +154,11 @@ class MinifluxClient implements ClientProvider {
     }
 
     if (cacheable) {
-      final result = await jsonCacheRepository.get(uri, ttl: ttl);
+      final result = await jsonCacheRepository.get(
+        uri,
+        ttl: ttl,
+        referenceTime: seenRepository.lastSyncTime,
+      );
       if (result.exists) {
         log.d('cached $uri expired is ${result.expired}');
         try {
@@ -214,7 +221,11 @@ class MinifluxClient implements ClientProvider {
     }
 
     if (cacheable) {
-      final result = await jsonCacheRepository.get(uri, ttl: ttl);
+      final result = await jsonCacheRepository.get(
+        uri,
+        ttl: ttl,
+        referenceTime: seenRepository.lastSyncTime,
+      );
       if (result.exists) {
         log.d('cached $uri expired is ${result.expired}');
         try {
@@ -416,6 +427,21 @@ class MinifluxClient implements ClientProvider {
       .then((j) => Entries.fromJson(j))
       .catchError((Object e) => Future<Entries>.error(e));
 
+  @override
+  Future<Entries> entries({
+    Direction? dir,
+    Status? status,
+    Order? order,
+    int? limit,
+    Duration? ttl,
+    String? query,
+  }) async => _getJson(
+        '/v1/entries${_p(dir, status, order, limit, null, query: query)}',
+        ttl: ttl,
+      )
+      .then((j) => Entries.fromJson(j))
+      .catchError((Object e) => Future<Entries>.error(e));
+
   /// GET /v1/categories/id/entries
   @override
   Future<Entries> categoryEntries(
@@ -425,8 +451,9 @@ class MinifluxClient implements ClientProvider {
     Order? order,
     int? limit,
     Duration? ttl,
+    String? query,
   }) async => _getJson(
-        '/v1/categories/${category.id}/entries${_p(dir, status, order, limit, null)}',
+        '/v1/categories/${category.id}/entries${_p(dir, status, order, limit, null, query: query)}',
         ttl: ttl,
       )
       .then((j) => Entries.fromJson(j))
@@ -441,12 +468,17 @@ class MinifluxClient implements ClientProvider {
     Order? order,
     int? limit,
     Duration? ttl,
+    String? query,
   }) async => _getJson(
-        '/v1/feeds/${feed.id}/entries${_p(dir, status, order, limit, null)}',
+        '/v1/feeds/${feed.id}/entries${_p(dir, status, order, limit, null, query: query)}',
         ttl: ttl,
       )
       .then((j) => Entries.fromJson(j))
       .catchError((Object e) => Future<Entries>.error(e));
+
+  /// GET /v1/entries?status=unread&direction=desc&query=xyz
+  /// GET /v1/categories/22/entries?limit=1&order=id&direction=asc
+  /// GET /v1/feeds/42/entries?limit=1&order=id&direction=asc
 
   /// PUT /v1/entries
   @override
@@ -472,8 +504,9 @@ class MinifluxClient implements ClientProvider {
     Status? status,
     Order? order,
     int? limit,
-    bool? starred,
-  ) {
+    bool? starred, {
+    String? query,
+  }) {
     var s = '';
     if (dir != null) {
       s += 'direction=${dir.name}';
@@ -493,6 +526,10 @@ class MinifluxClient implements ClientProvider {
     if (starred != null) {
       if (s.isNotEmpty) s += '&';
       s += 'starred=$starred';
+    }
+    if (query != null) {
+      if (s.isNotEmpty) s += '&';
+      s += 'search=${Uri.encodeQueryComponent(query)}';
     }
     if (s.isNotEmpty) {
       s = '?$s';

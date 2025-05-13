@@ -19,6 +19,7 @@ import 'seen.dart';
 
 class SeenRepository {
   SeenCubit? cubit;
+  DateTime? _lastSyncTime;
 
   void init(SeenCubit cubit) {
     this.cubit = cubit;
@@ -34,7 +35,12 @@ class SeenRepository {
 
   int get count => cubit?.state.count ?? 0;
 
+  DateTime? get lastSyncTime => _lastSyncTime;
+
   void flush() {
-    cubit?.flush();
+    if (cubit != null) {
+      _lastSyncTime = DateTime.now();
+      cubit?.flush();
+    }
   }
 }

@@ -17,20 +17,28 @@
 
 import 'dart:convert';
 
+import 'package:cabrillo/app/context.dart';
 import 'package:cabrillo/widget/empty.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:easy_image_viewer/easy_image_viewer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import '../cabrillo.dart';
 import '../miniflux/model.dart';
 
-Widget cachedImage(String url, {double? width, double? height, BoxFit? fit}) {
+Widget cachedImage(
+  String url, {
+  double? width,
+  double? height,
+  BoxFit? fit,
+  Alignment? alignment,
+}) {
   return CachedNetworkImage(
     width: width,
     height: height,
     fit: fit,
     imageUrl: url,
+    alignment: alignment ?? Alignment.center,
     // progressIndicatorBuilder: (context, url, downloadProgress) =>
     //     CircularProgressIndicator(value: downloadProgress.progress),
     // placeholder: (context, url) => Icon(Icons.image),
@@ -50,10 +58,13 @@ Widget image(
   );
 }
 
-Widget mainImage(String url) {
+Widget mainImage(BuildContext context, String url) {
   return Container(
     padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
-    child: cachedImage(url),
+    child: GestureDetector(
+      onTap: () => showImage(context, url),
+      child: cachedImage(url),
+    ),
   );
 }
 
@@ -102,4 +113,8 @@ Widget feedIcon(
       }
     },
   );
+}
+
+void showImage(BuildContext context, String url) {
+  showImageViewer(context, CachedNetworkImageProvider(url));
 }

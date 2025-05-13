@@ -42,8 +42,12 @@ class JsonCacheRepository {
     return _cache.put(uri, body);
   }
 
-  Future<JsonCacheResult> get(String uri, {Duration? ttl}) {
-    return _cache.get(uri, ttl: ttl);
+  Future<JsonCacheResult> get(
+    String uri, {
+    Duration? ttl,
+    DateTime? referenceTime,
+  }) {
+    return _cache.get(uri, ttl: ttl, referenceTime: referenceTime);
   }
 
   Future<void> invalidate(String uri) async {

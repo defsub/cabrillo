@@ -36,8 +36,8 @@ class CountsRepository {
 
   int unread(int id) => cubit?.state.entriesUnread(id) ?? 0;
 
-  void reload() {
-    clientRepository
+  Future<void> reload() async {
+    await clientRepository
         .counts(ttl: Duration.zero)
         .then((counts) {
           cubit?.updateCounts(counts);
@@ -45,7 +45,7 @@ class CountsRepository {
         .onError((error, stackTrace) {
           Future.delayed(const Duration(minutes: 3), () => reload());
         });
-    clientRepository
+    await clientRepository
         .categories(ttl: Duration.zero)
         .then((categories) {
           cubit?.updateCategories(categories);
