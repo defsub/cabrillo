@@ -15,10 +15,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Cabrillo.  If not, see <https://www.gnu.org/licenses/>.
 
+import 'dart:async';
+
 import 'package:cabrillo/app/context.dart';
 import 'package:cabrillo/counts/counts.dart';
 import 'package:cabrillo/miniflux/model.dart';
-import 'package:cabrillo/miniflux/provider.dart';
 import 'package:cabrillo/pages/search.dart';
 import 'package:cabrillo/seen/widget.dart';
 import 'package:cabrillo/settings/model.dart';
@@ -30,7 +31,7 @@ import 'package:cabrillo/widget/menu.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'entries.dart';
+import 'entry.dart';
 import 'page.dart';
 import 'push.dart';
 
@@ -116,14 +117,16 @@ class FeedEntriesWidget extends ClientPage<Entries> {
   FeedEntriesWidget(this.feed, this.status, {super.key});
 
   @override
-  void load(BuildContext context, {Duration? ttl}) {
-    context.miniflux.feedEntries(feed, ttl: ttl, status: status);
+  Future<void> load(BuildContext context, {Duration? ttl}) {
+    return context.miniflux.feedEntries(feed, ttl: ttl, status: status);
   }
 
   @override
   Future<void> reloadPage(BuildContext context) async {
-    super.reloadPage(context);
-    context.reload();
+    await super.reloadPage(context);
+    if (context.mounted) {
+      return context.reload();
+    }
   }
 
   @override

@@ -25,7 +25,7 @@ const appVersion = '0.0.4'; // #version#
 const appSource = 'https://cabrillo.app/';
 const appHome = 'https://cabrillo.app/';
 
-enum NavigationIndex { home, feeds, unread, starred, sync }
+enum NavigationIndex { home, unread, starred, sync }
 
 class AppState {}
 
@@ -72,9 +72,9 @@ class AppCubit extends Cubit<AppState> {
 
   void syncComplete() => emit(AppSyncComplete());
 
-  void me() {
+  Future<void> me() {
     // TODO use fields from Me, store in state
-    clientRepository
+    return clientRepository
         .me(ttl: Duration.zero)
         .then((me) => authenticated())
         .onError((e, stack) {

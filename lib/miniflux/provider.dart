@@ -19,22 +19,21 @@ import 'package:http/http.dart';
 
 import 'model.dart';
 
-enum Direction { asc, desc }
-
-enum Status { read, unread, removed }
-
-enum Order { id, status, publishedAt, categoryTitle, categoryId }
-
 abstract class ClientProvider {
   Client get client;
 
-  Future<Me> me({Duration? ttl = Duration.zero});
+  Future<Me> me({Duration? ttl});
 
-  Future<Feeds> feeds({Duration? ttl = Duration.zero});
+  Future<Feeds> feeds({Duration? ttl});
 
-  Future<Favicon> feedIcon(Feed feed, {Duration? ttl = Duration.zero});
+  Future<Favicon> feedIcon(Feed feed, {Duration? ttl});
 
-  Future<Categories> categories({Duration? ttl = Duration.zero});
+  Future<Categories> categories({Duration? ttl});
+
+  Future<Feeds> categoryFeeds(
+    Category category, {
+    Duration? ttl,
+  });
 
   Future<void> updateEntries(Iterable<int> entryIds, Status status);
 

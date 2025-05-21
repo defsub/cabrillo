@@ -17,9 +17,9 @@
 
 import 'dart:typed_data';
 
-import 'json_provider.dart';
+import 'provider.dart';
 
-class JsonCacheResult {
+class JsonCacheResult<T> {
   final bool exists;
   final bool expired;
 
@@ -27,9 +27,7 @@ class JsonCacheResult {
 
   factory JsonCacheResult.notFound() => JsonCacheResult(false, false);
 
-  Map<String, dynamic> read() => throw UnimplementedError;
-
-  List<dynamic> readList() => throw UnimplementedError;
+  T read() => throw UnimplementedError;
 }
 
 class JsonCacheRepository {
@@ -42,12 +40,12 @@ class JsonCacheRepository {
     return _cache.put(uri, body);
   }
 
-  Future<JsonCacheResult> get(
+  Future<JsonCacheResult<T>> get<T>(
     String uri, {
     Duration? ttl,
     DateTime? referenceTime,
   }) {
-    return _cache.get(uri, ttl: ttl, referenceTime: referenceTime);
+    return _cache.get<T>(uri, ttl: ttl, referenceTime: referenceTime);
   }
 
   Future<void> invalidate(String uri) async {

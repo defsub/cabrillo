@@ -19,8 +19,8 @@
 
 import 'package:audio_service/audio_service.dart';
 import 'package:cabrillo/app/context.dart';
-import 'package:cabrillo/util/date.dart';
 import 'package:cabrillo/player/player.dart';
+import 'package:cabrillo/util/date.dart';
 import 'package:cabrillo/util/merge.dart';
 import 'package:cabrillo/widget/empty.dart';
 import 'package:cabrillo/widget/image.dart';
@@ -121,6 +121,7 @@ class PlayerWidgetState extends State<PlayerWidget>
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
               _playPauseButton(context, iconSize: 24),
+              _fastForwardButton(context, iconSize: 24),
               Expanded(child: _seekBar(context)),
               _speedButton(context),
             ],
@@ -187,6 +188,15 @@ Widget _seekBar(BuildContext context) {
 //   );
 // }
 
+Widget _fastForwardButton(BuildContext context, {double? iconSize = 48}) {
+  final playerService = context.playerService;
+  return IconButton(
+    icon: const Icon(Icons.forward_30_outlined),
+    iconSize: iconSize,
+    onPressed: playerService.fastForward,
+  );
+}
+
 Widget _playPauseButton(BuildContext context, {double? iconSize = 48}) {
   final playerService = context.playerService;
 
@@ -240,13 +250,13 @@ Widget _speedButton(BuildContext context) {
     builder:
         (context, snapshot) => IconButton(
           icon: Text(
-            "${snapshot.data?.toStringAsFixed(1)}x",
+            '${snapshot.data?.toStringAsFixed(1)}x',
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           onPressed: () {
             showSliderDialog(
               context: context,
-              title: "Adjust speed",
+              title: 'Adjust speed',
               divisions: 10,
               min: 0.5,
               max: 1.5,

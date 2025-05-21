@@ -41,17 +41,11 @@ class CountsRepository {
         .counts(ttl: Duration.zero)
         .then((counts) {
           cubit?.updateCounts(counts);
-        })
-        .onError((error, stackTrace) {
-          Future.delayed(const Duration(minutes: 3), () => reload());
         });
     await clientRepository
         .categories(ttl: Duration.zero)
         .then((categories) {
           cubit?.updateCategories(categories);
-        })
-        .onError((error, stackTrace) {
-          Future.delayed(const Duration(minutes: 3), () => reload());
         });
   }
 }

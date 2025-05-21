@@ -19,15 +19,17 @@ import 'package:cabrillo/app/app.dart';
 import 'package:cabrillo/app/bloc.dart';
 import 'package:cabrillo/app/context.dart';
 import 'package:cabrillo/log/basic_printer.dart';
-import 'package:cabrillo/pages/home.dart';
+import 'package:cabrillo/pages/auth.dart';
+import 'package:cabrillo/pages/latest.dart';
 import 'package:cabrillo/pages/push.dart';
 import 'package:cabrillo/player/widget.dart';
 import 'package:cabrillo/seen/seen.dart';
-import 'package:cabrillo/settings/widget.dart';
+import 'package:cabrillo/starred/widget.dart';
+import 'package:cabrillo/unread/widget.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart' show WatchContext;
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:logger/logger.dart';
@@ -98,27 +100,16 @@ class _CabrilloWidget extends StatefulWidget {
 }
 
 class __CabrilloWidgetState extends State<_CabrilloWidget> {
-  static final _navigatorKeys = {
-    NavigationIndex.home: GlobalKey<NavigatorState>(),
-    NavigationIndex.feeds: GlobalKey<NavigatorState>(),
-    NavigationIndex.unread: GlobalKey<NavigatorState>(),
-    NavigationIndex.starred: GlobalKey<NavigatorState>(),
-  };
-
   NavigationIndex currentIndex = NavigationIndex.home;
   bool showPlayer = false;
   List<Widget> pages = [];
+  Map<NavigationIndex, GlobalKey<NavigatorState>> _navigatorKeys = {};
 
   @override
   void initState() {
     super.initState();
 
-    pages = [
-      CategoriesHomeWidget(key: _navigatorKeys[NavigationIndex.home]),
-      FeedsHomeWidget(key: _navigatorKeys[NavigationIndex.feeds]),
-      UnreadHomeWidget(key: _navigatorKeys[NavigationIndex.unread]),
-      StarredHomeWidget(key: _navigatorKeys[NavigationIndex.starred]),
-    ];
+    pages = _buildPages();
 
     if (context.settings.hasApiKey) {
       // assume authenticated if there's an api key
@@ -131,7 +122,7 @@ class __CabrilloWidgetState extends State<_CabrilloWidget> {
       _navigatorKeys[index]?.currentState;
 
   void _onNavTapped(BuildContext context, int index) {
-    if (index == NavigationIndex.sync.index) {
+    if (index == pages.length) {
       context.sync();
     } else if (index == currentIndex.index) {
       NavigatorState? navState = _navigatorState(currentIndex);
@@ -143,37 +134,44 @@ class __CabrilloWidgetState extends State<_CabrilloWidget> {
     }
   }
 
+  List<Widget> _buildPages() {
+    _navigatorKeys = {
+      NavigationIndex.home: GlobalKey<NavigatorState>(),
+      NavigationIndex.unread: GlobalKey<NavigatorState>(),
+      NavigationIndex.starred: GlobalKey<NavigatorState>(),
+    };
+    return [
+      withNavigation(LatestPage(key: _navigatorKeys[NavigationIndex.home])),
+      withNavigation(UnreadWidget(key: _navigatorKeys[NavigationIndex.unread])),
+      StarredWidget(key: _navigatorKeys[NavigationIndex.starred]),
+    ];
+  }
+
+  Widget withNavigation(Widget page, {String? route}) {
+    return Navigator(
+      key: page.key,
+      initialRoute: route ?? '/',
+      onGenerateRoute: (RouteSettings settings) {
+        return MaterialPageRoute(builder: (_) => page, settings: settings);
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    // TODO add app state to rebuild/refresh pages as needed
     final state = context.watch<AppCubit>().state;
-    if (state is AppNotAuthenticated) {
-      return Scaffold(
-        appBar: AppBar(title: Text(context.strings.minifluxSettings)),
-        body: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              'Error: Authentication Failed',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            MinifluxSettings(),
-            OutlinedButton(
-              child: Text(context.strings.applyLabel),
-              onPressed: () {
-                context.app.me();
-              },
-            ),
-          ],
-        ),
-      );
-    } else if (state is AppInitial) {
-      currentIndex = state.index;
-    } else if (state is AppNavChange) {
-      currentIndex = state.index;
-    } else if (state is AppShowPlayer) {
-      showPlayer = true;
-    } else if (state is AppHidePlayer) {
-      showPlayer = false;
+    switch (state) {
+      case AppNotAuthenticated():
+        return AuthWidget();
+      case AppInitial():
+        currentIndex = state.index;
+      case AppNavChange():
+        currentIndex = state.index;
+      case AppShowPlayer():
+        showPlayer = true;
+      case AppHidePlayer():
+        showPlayer = false;
     }
 
     return PopScope(
@@ -192,7 +190,6 @@ class __CabrilloWidgetState extends State<_CabrilloWidget> {
         }
       },
       child: Scaffold(
-        // floatingActionButton: _fab(context),
         body: _body(context),
         bottomNavigationBar: _bottomNavigation(),
       ),
@@ -220,20 +217,6 @@ class __CabrilloWidgetState extends State<_CabrilloWidget> {
     );
   }
 
-  // Widget _fab(BuildContext context) {
-  //   return BlocBuilder<SeenCubit, EntryState>(
-  //     builder: (context, state) {
-  //       if (state.entries.isNotEmpty) {
-  //         return FloatingActionButton(
-  //           child: Icon(Icons.sync),
-  //           onPressed: () => context.sync(),
-  //         );
-  //       }
-  //       return const EmptyWidget();
-  //     },
-  //   );
-  // }
-
   Widget _bottomNavigation() {
     return Stack(
       children: [
@@ -245,10 +228,6 @@ class __CabrilloWidgetState extends State<_CabrilloWidget> {
             BottomNavigationBarItem(
               icon: const Icon(Icons.home),
               label: context.strings.navHome,
-            ),
-            BottomNavigationBarItem(
-              icon: const Icon(Icons.rss_feed),
-              label: context.strings.navFeeds,
             ),
             BottomNavigationBarItem(
               icon: const Icon(Icons.feed),

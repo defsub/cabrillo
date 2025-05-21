@@ -17,9 +17,6 @@
 
 import 'package:cabrillo/app/context.dart';
 import 'package:cabrillo/miniflux/model.dart';
-import 'package:cabrillo/miniflux/provider.dart';
-import 'package:cabrillo/pages/page.dart';
-import 'package:cabrillo/pages/search.dart';
 import 'package:cabrillo/seen/widget.dart';
 import 'package:cabrillo/settings/settings.dart';
 import 'package:cabrillo/starred/widget.dart';
@@ -35,54 +32,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
 import 'push.dart';
-
-class CategoryEntriesWidget extends ClientPage<Entries> {
-  final Category category;
-  final Status status;
-
-  CategoryEntriesWidget(this.category, this.status, {super.key});
-
-  @override
-  void load(BuildContext context, {Duration? ttl}) {
-    context.miniflux.categoryEntries(category, ttl: ttl, status: status);
-  }
-
-  @override
-  Widget page(BuildContext context, Entries state) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(category.title),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.search),
-            onPressed: () => _onSearch(context),
-          ),
-          popupMenu(context, [
-            PopupItem.reload(context, (_) => reloadPage(context)),
-          ]),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () => reloadPage(context),
-        child: EntryListWidget(
-          state.entries,
-          status: status,
-          category: category,
-        ),
-      ),
-    );
-  }
-
-  @override
-  Future<void> reloadPage(BuildContext context) async {
-    super.reloadPage(context);
-    context.reload();
-  }
-
-  void _onSearch(BuildContext context) {
-    push(context, builder: (_) => SearchWidget(category: category));
-  }
-}
 
 class EntryListWidget extends StatelessWidget {
   final List<Entry> _entries;

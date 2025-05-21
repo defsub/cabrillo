@@ -19,28 +19,16 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:cabrillo/util/date.dart';
-import 'package:cabrillo/miniflux/provider.dart';
 import 'package:html/parser.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'model.g.dart';
 
-// get categories -> [ category ]
-// get category feeds -> [ feed ]
-// get feed icon -> icon
-// get category entries -> [ entry ]
-// get feed entries -> [ entry ]
-// get entries -> [ entry ]
-// get entry -> entry
+enum Direction { asc, desc }
 
-// mark all feed entries as read
-// mark all category entries as read
-// update entries [ ids, status=read ]
+enum Status { read, unread, removed }
 
-// toggle bookmark for entry
-
-// refresh feed -> 204 when complete
-// refresh all feeds -> 204
+enum Order { id, status, publishedAt, categoryTitle, categoryId }
 
 @JsonSerializable(fieldRename: FieldRename.snake)
 class Category {
@@ -74,15 +62,19 @@ class Categories {
 
   Categories(this.categories);
 
+  factory Categories.empty() => Categories([]);
+
   int get totalUnread => categories.fold(0, (c, v) => c + v.totalUnread);
 
   factory Categories.fromJson(List<dynamic> json) {
     List<Category> categories = [];
     for (var e in json) {
-      categories.add(Category.fromJson(e));
+      categories.add(Category.fromJson(e as Map<String, dynamic>));
     }
     return Categories(categories);
   }
+
+  List<dynamic> toJson() => categories.map((c) => c.toJson()).toList();
 }
 
 @JsonSerializable(fieldRename: FieldRename.snake)
@@ -189,7 +181,7 @@ class Feeds {
   factory Feeds.fromJson(List<dynamic> json) {
     List<Feed> feeds = [];
     for (var e in json) {
-      feeds.add(Feed.fromJson(e));
+      feeds.add(Feed.fromJson(e as Map<String, dynamic>));
     }
     return Feeds(feeds);
   }
@@ -310,33 +302,42 @@ class Entry {
     return _audioUri;
   }
 
+  bool get hasImage {
+    return image != null;
+  }
+
+  EntryImage? _image;
+
   EntryImage? get image {
-    // first try enclosure
-    final list = enclosures;
-    if (list != null) {
-      for (var e in list) {
-        if (e.isImage) {
-          return EntryImage(e.url, isEnclosure: true);
+    if (_image == null) {
+      // first try enclosure
+      final list = enclosures;
+      if (list != null) {
+        for (var e in list) {
+          if (e.isImage) {
+            _image = EntryImage(e.url, isEnclosure: true);
+            break;
+          }
+        }
+      }
+      if (_image == null) {
+        // next image in content
+        final re = RegExp(r'^\s*(<p>|)\s*(<img [^>]+>)');
+        final match = re.firstMatch(content);
+        if (match != null) {
+          final frag = parseFragment(match[2]);
+          final img = frag.firstChild;
+          if (img != null) {
+            // final srcSet = img.attributes['srcset'];
+            final src = img.attributes['src'];
+            if (src != null) {
+              _image = EntryImage(src, isContent: true);
+            }
+          }
         }
       }
     }
-
-    // next image in content
-    final re = RegExp(r'^\s*(<p>|)\s*(<img [^>]+>)');
-    final match = re.firstMatch(content);
-    if (match != null) {
-      final frag = parseFragment(match[2]);
-      final img = frag.firstChild;
-      if (img != null) {
-        // final srcSet = img.attributes['srcset'];
-        final src = img.attributes['src'];
-        if (src != null) {
-          return EntryImage(src, isContent: true);
-        }
-      }
-    }
-
-    return null;
+    return _image;
   }
 
   factory Entry.fromJson(Map<String, dynamic> json) => _$EntryFromJson(json);
@@ -365,6 +366,8 @@ class Entries extends EntryList {
   Iterable<Entry> unread() => entries.where((e) => e.isUnread);
 
   Iterable<Entry> read() => entries.where((e) => e.isRead);
+
+  Iterable<Entry> withImages() => entries.where((e) => e.hasImage);
 
   factory Entries.fromJson(Map<String, dynamic> json) =>
       _$EntriesFromJson(json);

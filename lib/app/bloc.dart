@@ -18,19 +18,22 @@
 import 'dart:io';
 
 import 'package:cabrillo/app/context.dart';
-import 'package:cabrillo/cache/json_repository.dart';
+import 'package:cabrillo/cache/repository.dart';
+import 'package:cabrillo/categories/categories.dart';
 import 'package:cabrillo/counts/counts.dart';
 import 'package:cabrillo/counts/repository.dart';
 import 'package:cabrillo/hive/hive_registrar.g.dart';
+import 'package:cabrillo/latest/latest.dart';
 import 'package:cabrillo/miniflux/repository.dart';
 import 'package:cabrillo/player/player.dart';
-import 'package:cabrillo/player/service.dart' show PlayerService;
+import 'package:cabrillo/player/service.dart';
 import 'package:cabrillo/seen/repository.dart';
 import 'package:cabrillo/seen/seen.dart';
 import 'package:cabrillo/settings/repository.dart';
 import 'package:cabrillo/settings/settings.dart';
 import 'package:cabrillo/starred/repository.dart';
 import 'package:cabrillo/starred/starred.dart';
+import 'package:cabrillo/unread/unread.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hive_ce/hive.dart';
@@ -97,6 +100,18 @@ class AppBloc {
       ),
       BlocProvider(
         lazy: false,
+        create: (context) => LatestCubit(context.read<ClientRepository>()),
+      ),
+      BlocProvider(
+        lazy: false,
+        create: (context) => UnreadCubit(context.read<ClientRepository>()),
+      ),
+      BlocProvider(
+        lazy: false,
+        create: (context) => CategoriesCubit(context.read<ClientRepository>()),
+      ),
+      BlocProvider(
+        lazy: false,
         create: (context) {
           final clientRepository = context.read<ClientRepository>();
           final settingsRepository = context.read<SettingsRepository>();
@@ -148,7 +163,12 @@ class AppBloc {
               final entry = state.entry;
               final position = state.position ?? 0;
               if (entry != null) {
-                context.player.play(entry, position: position);
+                context.player.play(
+                  entry,
+                  position: position,
+                  autoStart: false,
+                );
+                context.app.showPlayer();
               }
             }
           } else if (state is PlayerPlay) {
@@ -158,10 +178,10 @@ class AppBloc {
               playerService
                   .playEntry(entry, position: state.position)
                   .whenComplete(() {
-                if (state.autoStart) {
-                  playerService.play();
-                }
-              });
+                    if (state.autoStart) {
+                      playerService.play();
+                    }
+                  });
             }
           }
         },

@@ -21,13 +21,16 @@ import 'dart:typed_data';
 import 'package:hive_ce/hive.dart';
 import 'package:logger/logger.dart';
 
-import 'json.dart';
-import 'json_repository.dart';
+import 'model.dart';
+import 'repository.dart';
+
+// used to override forced refresh within this amount of seconds
+const cacheLifespan = Duration(seconds: 30);
 
 abstract class JsonCacheProvider {
   Future<void> put(String uri, Uint8List body);
 
-  Future<JsonCacheResult> get(
+  Future<JsonCacheResult<T>> get<T>(
     String uri, {
     Duration? ttl,
     DateTime? referenceTime,
@@ -36,7 +39,7 @@ abstract class JsonCacheProvider {
   Future<void> invalidate(String uri);
 }
 
-class JsonCacheEntry implements JsonCacheResult {
+class JsonCacheEntry<T> implements JsonCacheResult<T> {
   final String uri;
   final String data;
   final DateTime lastModified;
@@ -54,13 +57,8 @@ class JsonCacheEntry implements JsonCacheResult {
   );
 
   @override
-  Map<String, dynamic> read() {
-    return jsonDecode(data) as Map<String, dynamic>;
-  }
-
-  @override
-  List<dynamic> readList() {
-    return jsonDecode(data) as List<dynamic>;
+  T read() {
+    return jsonDecode(data) as T;
   }
 }
 
@@ -87,7 +85,7 @@ class HiveJsonCache implements JsonCacheProvider {
   }
 
   @override
-  Future<JsonCacheResult> get(
+  Future<JsonCacheResult<T>> get<T>(
     String uri, {
     Duration? ttl,
     DateTime? referenceTime,
@@ -98,14 +96,19 @@ class HiveJsonCache implements JsonCacheProvider {
     if (cache != null) {
       final lastModified = cache.lastModified;
       var expired = false;
-      if (referenceTime != null) {
-        // older that ref time means expired
-        expired = referenceTime.isAfter(lastModified);
-      } else if (ttl != null) {
-        final expirationTime = lastModified.add(ttl);
-        expired = DateTime.now().isAfter(expirationTime);
+      if (ttl != null) {
+        final now = DateTime.now();
+        final lifespan = now.difference(lastModified);
+        if (lifespan > cacheLifespan) {
+          final expirationTime = lastModified.add(ttl);
+          expired = DateTime.now().isAfter(expirationTime);
+        }
       }
-      return JsonCacheEntry(uri, cache.data, cache.lastModified, true, expired);
+      if (!expired) {
+        // older that ref time means expired
+        expired = referenceTime?.isAfter(lastModified) ?? false;
+      }
+      return JsonCacheEntry<T>(uri, cache.data, cache.lastModified, true, expired);
     }
     return JsonCacheResult.notFound();
   }

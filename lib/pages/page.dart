@@ -67,14 +67,14 @@ abstract mixin class ClientPageBuilder<T> {
     );
   }
 
-  Future<void> reloadPage(BuildContext context) async {
-    reload(context);
+  Future<void> reloadPage(BuildContext context) {
+    return reload(context);
   }
 
-  void load(BuildContext context, {Duration? ttl});
+  Future<void> load(BuildContext context, {Duration? ttl});
 
-  void reload(BuildContext context) {
-    load(context, ttl: Duration.zero);
+  Future<void> reload(BuildContext context) {
+    return load(context, ttl: Duration.zero);
   }
 }
 

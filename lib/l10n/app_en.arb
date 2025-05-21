@@ -1,6 +1,7 @@
 {
   "cabrillo": "Cabrillo",
   "minifluxSettings": "Miniflux Settings",
+  "authFailed": "Error: Authentication Failed",
   "settingHost": "Host",
   "settingApiKey": "API key",
   "settingPageDuration": "Page cache time",
@@ -10,6 +11,8 @@
   "settingShowReadingTime": "Show reading time",
   "settingAutoSeen": "Mark entries as read on seen",
   "title": "Cabrillo",
+  "latestTitle": "Latest",
+  "homeTitle": "Home",
   "categoriesTitle": "Categories",
   "feedsTitle": "Feeds",
   "unreadTitle": "Unread",

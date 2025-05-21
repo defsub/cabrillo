@@ -20,7 +20,6 @@ import 'package:cabrillo/seen/repository.dart';
 
 import 'client.dart';
 import 'model.dart';
-import 'provider.dart';
 import 'repository.dart';
 
 class MinifluxState {}
@@ -63,31 +62,36 @@ class MinifluxCubit extends Cubit<MinifluxState> {
     emit(MinifluxResult<T>(v));
   }
 
-  void me({Duration? ttl}) =>
+  Future<void> me({Duration? ttl}) =>
       _doit<Me>(({Duration? ttl}) => clientRepository.me(ttl: ttl), ttl: ttl);
 
-  void feeds({Duration? ttl}) => _doit<Feeds>(
+  Future<void> feeds({Duration? ttl}) => _doit<Feeds>(
     ({Duration? ttl}) => clientRepository.feeds(ttl: ttl),
     ttl: ttl,
   );
 
-  void categories({Duration? ttl}) => _doit<Categories>(
+  Future<void> categories({Duration? ttl}) => _doit<Categories>(
     ({Duration? ttl}) => clientRepository.categories(ttl: ttl),
     ttl: ttl,
   );
 
-  void starred({Duration? ttl, Status? status}) => _doit<Entries>(
+  Future<void> categoryFeeds(Category category, {Duration? ttl}) => _doit<Feeds>(
+    ({Duration? ttl}) => clientRepository.categoryFeeds(category, ttl: ttl),
+    ttl: ttl,
+  );
+
+  Future<void> starred({Duration? ttl, Status? status}) => _doit<Entries>(
     ({Duration? ttl}) => clientRepository.starred(ttl: ttl, status: status),
     ttl: ttl,
     status: status,
   );
 
-  void unread({Duration? ttl}) => _doit<Entries>(
+  Future<void> unread({Duration? ttl}) => _doit<Entries>(
     ({Duration? ttl}) => clientRepository.unread(ttl: ttl),
     ttl: ttl,
   );
 
-  void categoryEntries(Category category, {Duration? ttl, Status? status}) =>
+  Future<void> categoryEntries(Category category, {Duration? ttl, Status? status}) =>
       _doit<Entries>(
         ({Duration? ttl}) => clientRepository.categoryEntries(
           category,
@@ -98,7 +102,7 @@ class MinifluxCubit extends Cubit<MinifluxState> {
         status: status,
       );
 
-  void feedEntries(Feed feed, {Duration? ttl, Status? status}) =>
+  Future<void> feedEntries(Feed feed, {Duration? ttl, Status? status}) =>
       _doit<Entries>(
         ({Duration? ttl}) =>
             clientRepository.feedEntries(feed, ttl: ttl, status: status),
@@ -106,9 +110,9 @@ class MinifluxCubit extends Cubit<MinifluxState> {
         status: status,
       );
 
-  void search(String query, {Duration? ttl, Category? category, Feed? feed}) {
+  Future<void> search(String query, {Duration? ttl, Category? category, Feed? feed}) {
     MinifluxRequest<Entries> call;
-    final status = null;
+    final Status? status = null;
     if (category != null) {
       call =
           ({Duration? ttl}) => clientRepository.categoryEntries(
@@ -130,10 +134,10 @@ class MinifluxCubit extends Cubit<MinifluxState> {
           ({Duration? ttl}) =>
               clientRepository.entries(ttl: ttl, status: status, query: query);
     }
-    _doit<Entries>(call, ttl: ttl, status: status);
+    return _doit<Entries>(call, ttl: ttl, status: status);
   }
 
-  void counts({Duration? ttl}) => _doit<Counts>(
+  Future<void> counts({Duration? ttl}) => _doit<Counts>(
     ({Duration? ttl}) => clientRepository.counts(ttl: ttl),
     ttl: ttl,
   );
@@ -144,6 +148,7 @@ class MinifluxCubit extends Cubit<MinifluxState> {
     Duration? ttl,
   }) async {
     emit(MinifluxLoading());
+    print('call with ttl $ttl');
     return call(ttl: ttl)
         .timeout(_timeout)
         .then((T result) {
@@ -162,7 +167,6 @@ class MinifluxCubit extends Cubit<MinifluxState> {
             // remove any new unreads that are in the current un-synced state
             unread.removeAll(seenRepository.entries);
 
-            print('update read=${read.length} unread=${unread.length}');
             seenRepository.update(read, unread);
           }
           return emit(MinifluxResult<T>(result));

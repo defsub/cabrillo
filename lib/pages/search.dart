@@ -21,7 +21,7 @@ import 'package:cabrillo/pages/page.dart';
 import 'package:cabrillo/widget/menu.dart';
 import 'package:flutter/material.dart';
 
-import 'entries.dart';
+import 'entry.dart';
 
 class SearchWidget extends ClientPage<Entries> {
   final Feed? feed;
@@ -32,9 +32,9 @@ class SearchWidget extends ClientPage<Entries> {
     : super(value: Entries.empty());
 
   @override
-  void load(BuildContext context, {Duration? ttl}) {
+  Future<void> load(BuildContext context, {Duration? ttl}) async {
     if (_query.isNotEmpty) {
-      context.miniflux.search(
+      return context.miniflux.search(
         _query.toString(),
         ttl: Duration.zero,
         feed: feed,

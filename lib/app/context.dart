@@ -15,11 +15,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Cabrillo.  If not, see <https://www.gnu.org/licenses/>.
 
+import 'package:cabrillo/categories/categories.dart';
 import 'package:cabrillo/counts/counts.dart';
 import 'package:cabrillo/counts/repository.dart';
+import 'package:cabrillo/latest/latest.dart';
 import 'package:cabrillo/miniflux/miniflux.dart';
 import 'package:cabrillo/miniflux/model.dart';
-import 'package:cabrillo/miniflux/provider.dart';
 import 'package:cabrillo/miniflux/repository.dart';
 import 'package:cabrillo/player/player.dart';
 import 'package:cabrillo/player/service.dart';
@@ -28,6 +29,7 @@ import 'package:cabrillo/seen/seen.dart';
 import 'package:cabrillo/settings/settings.dart';
 import 'package:cabrillo/starred/repository.dart';
 import 'package:cabrillo/starred/starred.dart';
+import 'package:cabrillo/unread/unread.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
@@ -60,6 +62,12 @@ extension AppContext on BuildContext {
   SettingsCubit get settings => read<SettingsCubit>();
 
   PlayerCubit get player => read<PlayerCubit>();
+
+  LatestCubit get latest => read<LatestCubit>();
+
+  CategoriesCubit get categories => read<CategoriesCubit>();
+
+  UnreadCubit get unread => read<UnreadCubit>();
 
   Future<void> reload() {
     return countsRepository.reload();

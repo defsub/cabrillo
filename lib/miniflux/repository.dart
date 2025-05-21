@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Cabrillo.  If not, see <https://www.gnu.org/licenses/>.
 
-import 'package:cabrillo/cache/json_repository.dart';
+import 'package:cabrillo/cache/repository.dart';
 import 'package:cabrillo/seen/repository.dart';
 import 'package:cabrillo/settings/repository.dart';
 import 'package:cabrillo/state/entry.dart';
@@ -33,7 +33,7 @@ class ClientRepository {
   final ClientProvider _provider;
   final SettingsRepository settingsRepository;
 
-  static const _defaultTTL = Duration(hours: 1);
+  static const _defaultPageTTL = Duration(hours: 1);
   static const _defaultPageSize = 100;
   static const defaultIconTTL = Duration(hours: 24);
 
@@ -54,22 +54,30 @@ class ClientRepository {
 
   Client get client => _provider.client;
 
-  Duration get defaultTTL =>
-      settingsRepository.settings?.pageDuration ?? _defaultTTL;
+  Duration get defaultPageTTL =>
+      settingsRepository.settings?.pageDuration ?? _defaultPageTTL;
 
   int get defaultLimit =>
       settingsRepository.settings?.pageSize ?? _defaultPageSize;
 
-  Future<Me> me({Duration? ttl}) => _provider.me(ttl: ttl ?? defaultTTL);
+  Future<Me> me({Duration? ttl}) => _provider.me(ttl: ttl ?? defaultPageTTL);
 
   Future<Feeds> feeds({Duration? ttl}) =>
-      _provider.feeds(ttl: ttl ?? defaultTTL);
+      _provider.feeds(ttl: ttl ?? defaultPageTTL);
 
   Future<Favicon> feedIcon(Feed feed, {Duration? ttl}) =>
       _provider.feedIcon(feed, ttl: ttl ?? defaultIconTTL);
 
   Future<Categories> categories({Duration? ttl}) =>
-      _provider.categories(ttl: ttl ?? defaultTTL);
+      _provider.categories(ttl: ttl ?? defaultPageTTL);
+
+  Future<Feeds> categoryFeeds(
+    Category category, {
+    Duration? ttl,
+  }) => _provider.categoryFeeds(
+    category,
+    ttl: ttl ?? defaultPageTTL,
+  );
 
   Future<void> updateEntries(Iterable<int> entryIds, Status status) =>
       _provider.updateEntries(entryIds, status);
@@ -88,7 +96,7 @@ class ClientRepository {
     status: status,
     order: order,
     limit: limit,
-    ttl: ttl ?? defaultTTL,
+    ttl: ttl ?? defaultPageTTL,
   );
 
   Future<Entries> unread({
@@ -101,7 +109,7 @@ class ClientRepository {
     dir: dir,
     order: order,
     limit: limit ?? defaultLimit,
-    ttl: ttl ?? defaultTTL,
+    ttl: ttl ?? defaultPageTTL,
   );
 
   Future<Entries> entries({
@@ -115,7 +123,7 @@ class ClientRepository {
     dir: dir,
     order: order,
     limit: limit ?? defaultLimit,
-    ttl: ttl ?? defaultTTL,
+    ttl: ttl ?? defaultPageTTL,
     query: query,
   );
 
@@ -133,7 +141,7 @@ class ClientRepository {
     status: status,
     order: order,
     limit: limit ?? defaultLimit,
-    ttl: ttl ?? defaultTTL,
+    ttl: ttl ?? defaultPageTTL,
     query: query,
   );
 
@@ -151,7 +159,7 @@ class ClientRepository {
     status: status,
     order: order,
     limit: limit ?? defaultLimit,
-    ttl: ttl ?? defaultTTL,
+    ttl: ttl ?? defaultPageTTL,
     query: query,
   );
 

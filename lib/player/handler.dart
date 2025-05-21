@@ -35,6 +35,8 @@ class PlayerHandler extends BaseAudioHandler with SeekHandler {
         androidNotificationChannelName: 'Cabrillo audio playback',
         androidNotificationOngoing: true,
         androidStopForegroundOnPause: true,
+        fastForwardInterval: Duration(seconds: 30),
+        rewindInterval: Duration(seconds: 10),
       ),
     );
   }
@@ -59,7 +61,7 @@ class PlayerHandler extends BaseAudioHandler with SeekHandler {
         // LockCachingAudioSource(Uri.parse(mediaItem.id)),
         AudioSource.uri(Uri.parse(mediaItem.id)),
       );
-      _player.seek(Duration.zero);
+      await _player.seek(Duration.zero);
     } on PlayerException catch (e, stack) {
       log.e('playMediaItem', error: e, stackTrace: stack);
     }
@@ -77,6 +79,9 @@ class PlayerHandler extends BaseAudioHandler with SeekHandler {
   @override
   Future<void> seek(Duration position) => _player.seek(position);
 
+  @override
+  Future<void> setSpeed(double speed) => _player.setSpeed(speed);
+
   // @override
   // Future<void> skipToQueueItem(int i) => _player.seek(Duration.zero, index: i);
 
@@ -84,8 +89,7 @@ class PlayerHandler extends BaseAudioHandler with SeekHandler {
     return PlaybackState(
       controls: [
         MediaControl.rewind,
-        if (_player.playing) MediaControl.pause else
-          MediaControl.play,
+        if (_player.playing) MediaControl.pause else MediaControl.play,
         MediaControl.stop,
         MediaControl.fastForward,
       ],
@@ -96,13 +100,13 @@ class PlayerHandler extends BaseAudioHandler with SeekHandler {
       },
       androidCompactActionIndices: const [0, 1, 3],
       processingState:
-      const {
-        ProcessingState.idle: AudioProcessingState.idle,
-        ProcessingState.loading: AudioProcessingState.loading,
-        ProcessingState.buffering: AudioProcessingState.buffering,
-        ProcessingState.ready: AudioProcessingState.ready,
-        ProcessingState.completed: AudioProcessingState.completed,
-      }[_player.processingState]!,
+          const {
+            ProcessingState.idle: AudioProcessingState.idle,
+            ProcessingState.loading: AudioProcessingState.loading,
+            ProcessingState.buffering: AudioProcessingState.buffering,
+            ProcessingState.ready: AudioProcessingState.ready,
+            ProcessingState.completed: AudioProcessingState.completed,
+          }[_player.processingState]!,
       playing: _player.playing,
       updatePosition: _player.position,
       bufferedPosition: _player.bufferedPosition,

@@ -18,56 +18,38 @@
 import 'package:cabrillo/app/context.dart';
 import 'package:cabrillo/miniflux/model.dart';
 import 'package:cabrillo/pages/entry.dart';
-import 'package:cabrillo/pages/page.dart';
 import 'package:cabrillo/pages/push.dart';
+import 'package:cabrillo/pages/search.dart';
 import 'package:cabrillo/settings/model.dart';
 import 'package:cabrillo/settings/settings.dart';
 import 'package:cabrillo/settings/widget.dart';
-import 'package:cabrillo/widget/button.dart';
 import 'package:cabrillo/widget/menu.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'starred.dart';
+import 'unread.dart';
 
-const _smallSize = 20.0;
-
-Widget starredIconButton(BuildContext context, Entry entry) {
-  final starred = context.watch<StarredCubit>().state.contains(entry.id);
-  return IconButton(
-    onPressed: () {
-      context.starredRepository.toggle(entry.id);
-    },
-    icon: Icon(starred ? Icons.star : Icons.star_outline),
-  );
-}
-
-Widget starredSmallIconButton(BuildContext context, Entry entry) {
-  final starred = context.watch<StarredCubit>().state.contains(entry.id);
-  return SmallIconButton(
-    onPressed: () {
-      context.starredRepository.toggle(entry.id);
-    },
-    icon: Icon(starred ? Icons.star : Icons.star_outline, size: _smallSize),
-  );
-}
-
-class StarredWidget extends NavigatorClientPage<Entries> {
-  StarredWidget({super.key});
+class UnreadWidget extends StatelessWidget {
+  const UnreadWidget({super.key});
 
   @override
-  Future<void> load(BuildContext context, {Duration? ttl}) {
-    return context.miniflux.starred(ttl: ttl);
-  }
-
-  @override
-  Widget page(BuildContext context, Entries state) {
+  Widget build(BuildContext context) {
+    final state = context.watch<UnreadCubit>().state;
     final settings = context.watch<SettingsCubit>().state.settings;
-    final list = _sortedEntries(settings, state);
+
+    if (state.status == UnreadStatus.loading) {
+      return Center(child: CircularProgressIndicator());
+    }
+
+    final list = _sortedEntries(settings, state.unread);
     return Scaffold(
       appBar: AppBar(
-        title: Text(context.strings.starredTitle),
+        title: Text(context.strings.unreadTitle),
         actions: [
+          IconButton(
+            icon: Icon(Icons.search),
+            onPressed: () => _onSearch(context),
+          ),
           _entriesSortMenu(context),
           popupMenu(context, [
             PopupItem.markPageSeen(context, (_) => _onMarkSeen(context, list)),
@@ -83,12 +65,20 @@ class StarredWidget extends NavigatorClientPage<Entries> {
     );
   }
 
-  @override
   Future<void> reloadPage(BuildContext context) async {
-    await super.reloadPage(context);
+    await context.unread.reload();
+
+    if (context.mounted) {
+      await context.latest.reload();
+    }
     if (context.mounted) {
       return context.reload();
     }
+  }
+
+  void _onSearch(BuildContext context) {
+    // TODO currently this searches all not just unread
+    push(context, builder: (_) => SearchWidget());
   }
 }
 

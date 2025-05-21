@@ -16,7 +16,7 @@
 // along with Cabrillo.  If not, see <https://www.gnu.org/licenses/>.
 
 import 'package:hive_ce/hive.dart';
-import 'package:cabrillo/cache/json.dart';
+import 'package:cabrillo/cache/model.dart';
 
 part 'adapters.g.dart';
 

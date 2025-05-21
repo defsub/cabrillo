@@ -45,13 +45,8 @@ class StarredRepository {
   }
 
   void reload() {
-    clientRepository
-        .starred(ttl: Duration.zero)
-        .then((entries) {
-          cubit?.replace(entries.ids);
-        })
-        .onError((error, stackTrace) {
-          Future.delayed(const Duration(minutes: 3), () => reload());
-        });
+    clientRepository.starred(ttl: Duration.zero).then((entries) {
+      cubit?.replace(entries.ids);
+    });
   }
 }

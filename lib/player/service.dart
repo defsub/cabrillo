@@ -76,4 +76,6 @@ class PlayerService {
   Future<void> seek(Duration position) => _handler.seek(position);
 
   Future<void> setSpeed(double speed) => _handler.setSpeed(speed);
+
+  Future<void> fastForward() => _handler.fastForward();
 }

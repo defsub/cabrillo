@@ -20,7 +20,7 @@ import 'dart:convert';
 import 'dart:core';
 import 'dart:io';
 
-import 'package:cabrillo/cache/json_repository.dart';
+import 'package:cabrillo/cache/repository.dart';
 import 'package:cabrillo/miniflux/model.dart';
 import 'package:cabrillo/seen/repository.dart';
 import 'package:cabrillo/settings/repository.dart';
@@ -139,22 +139,26 @@ class MinifluxClient implements ClientProvider {
     return headers;
   }
 
-  Future<Map<String, dynamic>> _getJson(
-    String uri, {
-    bool cacheable = true,
-    Duration? ttl,
-  }) async {
-    Map<String, dynamic>? cachedJson;
-
+  void _checkApiKey() {
     final token = settingsRepository.settings?.apiKey;
     if (token == null) {
       throw const ClientException(
         statusCode: HttpStatus.networkAuthenticationRequired,
       );
     }
+  }
+
+  Future<T> _getJsonResult<T>(
+    String uri, {
+    bool cacheable = true,
+    Duration? ttl,
+  }) async {
+    T? cachedJson;
+
+    _checkApiKey();
 
     if (cacheable) {
-      final result = await jsonCacheRepository.get(
+      final result = await jsonCacheRepository.get<T>(
         uri,
         ttl: ttl,
         referenceTime: seenRepository.lastSyncTime,
@@ -193,8 +197,7 @@ class MinifluxClient implements ClientProvider {
       if (cacheable) {
         await jsonCacheRepository.put(uri, response.bodyBytes);
       }
-      return jsonDecode(utf8.decode(response.bodyBytes))
-          as Map<String, dynamic>;
+      return jsonDecode(utf8.decode(response.bodyBytes)) as T;
     } catch (e, stackTrace) {
       if (e is SocketException || e is TimeoutException || e is TlsException) {
         if (cachedJson != null) {
@@ -202,75 +205,145 @@ class MinifluxClient implements ClientProvider {
           return cachedJson;
         }
       }
-      return Future<Map<String, dynamic>>.error(e, stackTrace);
+      return Future<T>.error(e, stackTrace);
     }
   }
+
+  Future<Map<String, dynamic>> _getJson(
+    String uri, {
+    bool cacheable = true,
+    Duration? ttl,
+  }) =>
+      _getJsonResult<Map<String, dynamic>>(uri, cacheable: cacheable, ttl: ttl);
 
   Future<List<dynamic>> _getJsonList(
     String uri, {
     bool cacheable = true,
     Duration? ttl,
-  }) async {
-    List<dynamic>? cachedJson;
+  }) => _getJsonResult<List<dynamic>>(uri, cacheable: cacheable, ttl: ttl);
 
-    final token = settingsRepository.settings?.apiKey;
-    if (token == null) {
-      throw const ClientException(
-        statusCode: HttpStatus.networkAuthenticationRequired,
-      );
-    }
-
-    if (cacheable) {
-      final result = await jsonCacheRepository.get(
-        uri,
-        ttl: ttl,
-        referenceTime: seenRepository.lastSyncTime,
-      );
-      if (result.exists) {
-        log.d('cached $uri expired is ${result.expired}');
-        try {
-          cachedJson = result.readList();
-        } catch (e) {
-          // can't parse cached json, will try to replace it
-          log.w('parse failed', error: e);
-        }
-        if (cachedJson != null && result.expired == false) {
-          // not expired so use the cached value
-          return cachedJson;
-        }
-      }
-    }
-
-    try {
-      final response = await _client
-          .get(Uri.parse('$endpoint$uri'), headers: _headersWithAuthToken())
-          .timeout(defaultTimeout);
-      log.d('got ${response.statusCode} for $uri');
-      if (response.statusCode != HttpStatus.ok) {
-        if (response.statusCode >= HttpStatus.internalServerError &&
-            cachedJson != null) {
-          return cachedJson;
-        }
-        throw ClientException(
-          statusCode: response.statusCode,
-          url: response.request?.url.toString(),
-        );
-      }
-      log.t('got response ${response.body}');
-      if (cacheable) {
-        await jsonCacheRepository.put(uri, response.bodyBytes);
-      }
-      return jsonDecode(utf8.decode(response.bodyBytes)) as List<dynamic>;
-    } catch (e, stackTrace) {
-      if (e is SocketException || e is TimeoutException || e is TlsException) {
-        if (cachedJson != null) {
-          log.w('using cached json', error: e);
-          return cachedJson;
-        }
-      }
-      return Future<List<dynamic>>.error(e, stackTrace);
-    }
-  }
+  // Future<Map<String, dynamic>> _getJsonx(
+  //   String uri, {
+  //   bool cacheable = true,
+  //   Duration? ttl,
+  // }) async {
+  //   Map<String, dynamic>? cachedJson;
+  //
+  //   _checkApiKey();
+  //
+  //   if (cacheable) {
+  //     final result = await jsonCacheRepository.get(
+  //       uri,
+  //       ttl: ttl,
+  //       referenceTime: seenRepository.lastSyncTime,
+  //     );
+  //     if (result.exists) {
+  //       log.d('cached $uri expired is ${result.expired}');
+  //       try {
+  //         cachedJson = result.read();
+  //       } catch (e) {
+  //         // can't parse cached json, will try to replace it
+  //         log.w('parse failed', error: e);
+  //       }
+  //       if (cachedJson != null && result.expired == false) {
+  //         // not expired so use the cached value
+  //         return cachedJson;
+  //       }
+  //     }
+  //   }
+  //
+  //   try {
+  //     final response = await _client
+  //         .get(Uri.parse('$endpoint$uri'), headers: _headersWithAuthToken())
+  //         .timeout(defaultTimeout);
+  //     log.d('got ${response.statusCode} for $uri');
+  //     if (response.statusCode != HttpStatus.ok) {
+  //       if (response.statusCode >= HttpStatus.internalServerError &&
+  //           cachedJson != null) {
+  //         return cachedJson;
+  //       }
+  //       throw ClientException(
+  //         statusCode: response.statusCode,
+  //         url: response.request?.url.toString(),
+  //       );
+  //     }
+  //     log.t('got response ${response.body}');
+  //     if (cacheable) {
+  //       await jsonCacheRepository.put(uri, response.bodyBytes);
+  //     }
+  //     return jsonDecode(utf8.decode(response.bodyBytes))
+  //         as Map<String, dynamic>;
+  //   } catch (e, stackTrace) {
+  //     if (e is SocketException || e is TimeoutException || e is TlsException) {
+  //       if (cachedJson != null) {
+  //         log.w('using cached json', error: e);
+  //         return cachedJson;
+  //       }
+  //     }
+  //     return Future<Map<String, dynamic>>.error(e, stackTrace);
+  //   }
+  // }
+  //
+  // Future<List<dynamic>> _getJsonList(
+  //   String uri, {
+  //   bool cacheable = true,
+  //   Duration? ttl,
+  // }) async {
+  //   List<dynamic>? cachedJson;
+  //
+  //   _checkApiKey();
+  //
+  //   if (cacheable) {
+  //     final result = await jsonCacheRepository.get(
+  //       uri,
+  //       ttl: ttl,
+  //       referenceTime: seenRepository.lastSyncTime,
+  //     );
+  //     if (result.exists) {
+  //       log.d('cached $uri expired is ${result.expired}');
+  //       try {
+  //         cachedJson = result.readList();
+  //       } catch (e) {
+  //         // can't parse cached json, will try to replace it
+  //         log.w('parse failed', error: e);
+  //       }
+  //       if (cachedJson != null && result.expired == false) {
+  //         // not expired so use the cached value
+  //         return cachedJson;
+  //       }
+  //     }
+  //   }
+  //
+  //   try {
+  //     final response = await _client
+  //         .get(Uri.parse('$endpoint$uri'), headers: _headersWithAuthToken())
+  //         .timeout(defaultTimeout);
+  //     log.d('got ${response.statusCode} for $uri');
+  //     if (response.statusCode != HttpStatus.ok) {
+  //       if (response.statusCode >= HttpStatus.internalServerError &&
+  //           cachedJson != null) {
+  //         return cachedJson;
+  //       }
+  //       throw ClientException(
+  //         statusCode: response.statusCode,
+  //         url: response.request?.url.toString(),
+  //       );
+  //     }
+  //     log.t('got response ${response.body}');
+  //     if (cacheable) {
+  //       await jsonCacheRepository.put(uri, response.bodyBytes);
+  //     }
+  //     return jsonDecode(utf8.decode(response.bodyBytes)) as List<dynamic>;
+  //   } catch (e, stackTrace) {
+  //     if (e is SocketException || e is TimeoutException || e is TlsException) {
+  //       if (cachedJson != null) {
+  //         log.w('using cached json', error: e);
+  //         return cachedJson;
+  //       }
+  //     }
+  //     return Future<List<dynamic>>.error(e, stackTrace);
+  //   }
+  // }
 
   // Future<void> _delete(String uri) async {
   //   return _method('DELETE', uri);
@@ -282,12 +355,7 @@ class MinifluxClient implements ClientProvider {
 
   // call a method w/o any input or output data.
   Future<void> _method(String method, String uri) async {
-    final token = settingsRepository.settings?.apiKey;
-    if (token == null) {
-      throw const ClientException(
-        statusCode: HttpStatus.networkAuthenticationRequired,
-      );
-    }
+    _checkApiKey();
 
     try {
       http.Response response;
@@ -333,12 +401,8 @@ class MinifluxClient implements ClientProvider {
       HttpHeaders.contentTypeHeader: ContentType.json.toString(),
     };
 
-    final token = settingsRepository.settings?.apiKey;
-    if (token == null) {
-      throw const ClientException(
-        statusCode: HttpStatus.networkAuthenticationRequired,
-      );
-    }
+    _checkApiKey();
+
     headers.addAll(_headersWithAuthToken());
 
     log.t(jsonEncode(json));
@@ -399,6 +463,13 @@ class MinifluxClient implements ClientProvider {
       _getJsonList('/v1/categories?counts=true', ttl: ttl)
           .then((j) => Categories.fromJson(j))
           .catchError((Object e) => Future<Categories>.error(e));
+
+  /// GET /v1/categories/id/feeds
+  @override
+  Future<Feeds> categoryFeeds(Category category, {Duration? ttl}) async =>
+      _getJsonList('/v1/categories/${category.id}/feeds', ttl: ttl)
+          .then((j) => Feeds.fromJson(j))
+          .catchError((Object e) => Future<Feeds>.error(e));
 
   /// GET /v1/entries?starred=true
   @override
