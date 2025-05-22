@@ -71,7 +71,7 @@ class EntryListWidget extends StatelessWidget {
                 );
                 if (context.enableAutoSeen(status, entry)) {
                   return VisibilityDetector(
-                    key: Key('EntryTile-${entry.id}'),
+                    key: UniqueKey(),
                     onVisibilityChanged: (state) {
                       if (state.visibleFraction > 0.9) {
                         context.seen.add(entry.id);
@@ -164,10 +164,7 @@ class EntryTileWidget extends StatelessWidget {
                   spacing: 16,
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    if (status == Status.unread)
-                      seenSmallIconButton(context, entry)
-                    else
-                      readSmallIcon(),
+                    statusIconButton(context, entry, status, true),
                     starredSmallIconButton(context, entry),
                   ],
                 ),
@@ -245,10 +242,7 @@ class EntryWidget extends StatelessWidget {
                         },
                         icon: Icon(Icons.play_arrow),
                       ),
-                    if (status == Status.unread)
-                      seenIconButton(context, entry)
-                    else
-                      readIcon(),
+                    statusIconButton(context, entry, status, false),
                     starredIconButton(context, entry),
                   ],
                 ),

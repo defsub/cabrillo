@@ -24,6 +24,8 @@ import 'package:cabrillo/pages/category.dart';
 import 'package:cabrillo/pages/entry.dart';
 import 'package:cabrillo/pages/push.dart';
 import 'package:cabrillo/pages/search.dart';
+import 'package:cabrillo/settings/model.dart';
+import 'package:cabrillo/settings/settings.dart';
 import 'package:cabrillo/settings/widget.dart';
 import 'package:cabrillo/util/date.dart';
 import 'package:cabrillo/widget/empty.dart';
@@ -33,17 +35,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
-class LatestPage extends StatelessWidget {
-  const LatestPage({super.key});
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
     final state = context.watch<CategoriesCubit>().state;
     final latest = context.watch<LatestCubit>().state;
+    final settings = context.watch<SettingsCubit>().state;
     if (state.status == CategoriesStatus.loading) {
       return Center(child: CircularProgressIndicator());
     }
-    // final settings = context.watch<SettingsCubit>().state.settings;
     return Scaffold(
       appBar: AppBar(
         title: Text(context.strings.homeTitle),
@@ -52,6 +54,7 @@ class LatestPage extends StatelessWidget {
             icon: Icon(Icons.search),
             onPressed: () => _onSearch(context),
           ),
+          _sortMenu(context),
           popupMenu(context, [
             PopupItem.reload(context, (_) => reloadPage(context)),
             PopupItem.settings(context, (_) => _onSettings(context)),
@@ -63,7 +66,7 @@ class LatestPage extends StatelessWidget {
         onRefresh: () => reloadPage(context),
         child: SingleChildScrollView(
           physics: AlwaysScrollableScrollPhysics(),
-          child: _body(context, state, latest),
+          child: _body(context, state, latest, settings),
         ),
       ),
     );
@@ -73,9 +76,10 @@ class LatestPage extends StatelessWidget {
     BuildContext context,
     CategoriesState state,
     LatestState latest,
+    SettingsState settings,
   ) {
     final showGrid = latest.entries.withImages().length > 1;
-    if (showGrid == false) {
+    if (settings.settings.showImages == false || showGrid == false) {
       return CategoryList(state.categories);
     }
 
@@ -107,7 +111,7 @@ class LatestPage extends StatelessWidget {
       await context.latest.reload();
     }
     if (context.mounted) {
-      return context.reload();
+      return context.reloadCounts();
     }
   }
 
@@ -139,6 +143,19 @@ class LatestPage extends StatelessWidget {
       // ],
     );
   }
+
+  Widget _sortMenu(BuildContext context) {
+    return popupMenu(context, [
+      PopupItem.sortTitle(
+        context,
+        (context) => context.settings.categoriesSort = SortOrder.title,
+      ),
+      PopupItem.sortUnread(
+        context,
+        (context) => context.settings.categoriesSort = SortOrder.unread,
+      ),
+    ], icon: Icon(Icons.sort));
+  }
 }
 
 class CategoryList extends StatelessWidget {
@@ -148,7 +165,12 @@ class CategoryList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final list = categories.categories;
+    final settings = context.watch<SettingsCubit>().state.settings;
+    final list = List<Category>.from(categories.categories);
+    list.sort((a, b) => a.sortTitle.compareTo(b.sortTitle));
+    if (settings.categoriesSort == SortOrder.unread) {
+      list.sort((a, b) => b.totalUnread.compareTo(a.totalUnread));
+    }
     return Column(children: list.map((c) => CategoryTileWidget(c)).toList());
   }
 }
@@ -324,7 +346,13 @@ class ImageTile extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     return GestureDetector(
       onTap: () {
-        push(context, builder: (_) => EntryWidget(entry, feed: entry.feed));
+        context.seen.add(entry.id);
+        push(
+          context,
+          builder:
+              (_) =>
+                  EntryWidget(entry, feed: entry.feed, status: Status.unread),
+        );
       },
       child: Stack(
         fit: StackFit.expand,

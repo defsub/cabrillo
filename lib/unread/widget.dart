@@ -67,12 +67,12 @@ class UnreadWidget extends StatelessWidget {
 
   Future<void> reloadPage(BuildContext context) async {
     await context.unread.reload();
-
     if (context.mounted) {
+      // TODO this keeps latest grid in sync
       await context.latest.reload();
     }
     if (context.mounted) {
-      return context.reload();
+      return context.reloadCounts();
     }
   }
 

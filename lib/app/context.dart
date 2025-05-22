@@ -18,6 +18,7 @@
 import 'package:cabrillo/categories/categories.dart';
 import 'package:cabrillo/counts/counts.dart';
 import 'package:cabrillo/counts/repository.dart';
+import 'package:cabrillo/l10n/app_localizations.dart';
 import 'package:cabrillo/latest/latest.dart';
 import 'package:cabrillo/miniflux/miniflux.dart';
 import 'package:cabrillo/miniflux/model.dart';
@@ -32,7 +33,6 @@ import 'package:cabrillo/starred/starred.dart';
 import 'package:cabrillo/unread/unread.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import 'app.dart';
 
@@ -69,17 +69,20 @@ extension AppContext on BuildContext {
 
   UnreadCubit get unread => read<UnreadCubit>();
 
-  Future<void> reload() {
+  Future<void> reloadCounts() {
     return countsRepository.reload();
   }
 
   void sync() {
     final state = seenRepository.cubit?.state;
     if (state != null) {
-      clientRepository.updateSeen(state).then((_) {
-        seenRepository.flush();
+      clientRepository.updateSeen(state).then((_) async {
+        seenRepository.sync();
         app.syncComplete();
-        reload();
+        // TOOD this seems like a lot...
+        await reloadCounts();
+        await unread.reload();
+        await latest.reload();
       });
     }
   }

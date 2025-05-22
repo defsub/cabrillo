@@ -75,10 +75,11 @@ class MinifluxCubit extends Cubit<MinifluxState> {
     ttl: ttl,
   );
 
-  Future<void> categoryFeeds(Category category, {Duration? ttl}) => _doit<Feeds>(
-    ({Duration? ttl}) => clientRepository.categoryFeeds(category, ttl: ttl),
-    ttl: ttl,
-  );
+  Future<void> categoryFeeds(Category category, {Duration? ttl}) =>
+      _doit<Feeds>(
+        ({Duration? ttl}) => clientRepository.categoryFeeds(category, ttl: ttl),
+        ttl: ttl,
+      );
 
   Future<void> starred({Duration? ttl, Status? status}) => _doit<Entries>(
     ({Duration? ttl}) => clientRepository.starred(ttl: ttl, status: status),
@@ -91,16 +92,16 @@ class MinifluxCubit extends Cubit<MinifluxState> {
     ttl: ttl,
   );
 
-  Future<void> categoryEntries(Category category, {Duration? ttl, Status? status}) =>
-      _doit<Entries>(
-        ({Duration? ttl}) => clientRepository.categoryEntries(
-          category,
-          ttl: ttl,
-          status: status,
-        ),
-        ttl: ttl,
-        status: status,
-      );
+  Future<void> categoryEntries(
+    Category category, {
+    Duration? ttl,
+    Status? status,
+  }) => _doit<Entries>(
+    ({Duration? ttl}) =>
+        clientRepository.categoryEntries(category, ttl: ttl, status: status),
+    ttl: ttl,
+    status: status,
+  );
 
   Future<void> feedEntries(Feed feed, {Duration? ttl, Status? status}) =>
       _doit<Entries>(
@@ -110,7 +111,12 @@ class MinifluxCubit extends Cubit<MinifluxState> {
         status: status,
       );
 
-  Future<void> search(String query, {Duration? ttl, Category? category, Feed? feed}) {
+  Future<void> search(
+    String query, {
+    Duration? ttl,
+    Category? category,
+    Feed? feed,
+  }) {
     MinifluxRequest<Entries> call;
     final Status? status = null;
     if (category != null) {
@@ -148,29 +154,9 @@ class MinifluxCubit extends Cubit<MinifluxState> {
     Duration? ttl,
   }) async {
     emit(MinifluxLoading());
-    print('call with ttl $ttl');
     return call(ttl: ttl)
         .timeout(_timeout)
-        .then((T result) {
-          if (result is EntryList && status == Status.unread) {
-            // Status.read means treat all as read from the server
-            // so no need to do anything here
-            final read = <int>{};
-            final unread = <int>{};
-            for (final e in result.iterable) {
-              if (e.isRead) {
-                read.add(e.id);
-              } else if (e.isUnread) {
-                unread.add(e.id);
-              }
-            }
-            // remove any new unreads that are in the current un-synced state
-            unread.removeAll(seenRepository.entries);
-
-            seenRepository.update(read, unread);
-          }
-          return emit(MinifluxResult<T>(result));
-        })
+        .then((T result) => emit(MinifluxResult<T>(result)))
         .onError(_handleError);
   }
 

@@ -114,7 +114,7 @@ class CategoryEntriesWidget extends ClientPage<Entries> {
   Future<void> reloadPage(BuildContext context) async {
     await super.reloadPage(context);
     if (context.mounted) {
-      return context.reload();
+      return context.reloadCounts();
     }
   }
 
@@ -157,8 +157,10 @@ class CategoryFeedsWidget extends ClientPage<Feeds> {
 
   @override
   Future<void> reloadPage(BuildContext context) async {
-    unawaited(context.reload());
-    return super.reloadPage(context);
+    await super.reloadPage(context);
+    if (context.mounted) {
+      return context.reloadCounts();
+    }
   }
 
   void _onSearch(BuildContext context) {

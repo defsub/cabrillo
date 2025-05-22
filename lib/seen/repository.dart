@@ -26,7 +26,7 @@ class SeenRepository {
   }
 
   Iterable<int> get entries {
-    return cubit?.state.entries ?? [];
+    return cubit?.state.read.entries ?? [];
   }
 
   void update(Iterable<int> add, Iterable<int> remove) {
@@ -37,10 +37,10 @@ class SeenRepository {
 
   DateTime? get lastSyncTime => _lastSyncTime;
 
-  void flush() {
+  void sync() {
     if (cubit != null) {
       _lastSyncTime = DateTime.now();
-      cubit?.flush();
+      cubit?.sync();
     }
   }
 }

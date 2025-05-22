@@ -1,3 +1,14 @@
+## 0.0.5
+
+- restore player at startup
+- added fast forward 30s button to player
+- moved feeds view to long press on category
+- refactor async pages and cubits
+- check lifespan in cache to override
+- new home page with image grid
+- updated seen/read
+- added icon
+
 ## 0.0.4
 
 - show read entries when no unread

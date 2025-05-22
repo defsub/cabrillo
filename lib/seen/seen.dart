@@ -15,11 +15,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Cabrillo.  If not, see <https://www.gnu.org/licenses/>.
 
-import 'package:cabrillo/state/entry.dart';
 import 'package:hydrated_bloc/hydrated_bloc.dart';
 
-class SeenCubit extends HydratedCubit<EntryState> {
-  SeenCubit() : super(EntryState({}));
+import 'model.dart';
+
+class SeenCubit extends HydratedCubit<SeenState> {
+  SeenCubit() : super(SeenState.initial());
 
   void add(int entryId) => emit(state.add(entryId));
 
@@ -29,15 +30,15 @@ class SeenCubit extends HydratedCubit<EntryState> {
 
   void removeAll(Iterable<int> ids) => emit(state.removeAll(ids));
 
-  void flush() => emit(EntryState({}));
+  void sync() => emit(state.sync());
 
   void update(Iterable<int> add, Iterable<int> remove) =>
       emit(state.update(add, remove));
 
   @override
-  EntryState fromJson(Map<String, dynamic> json) =>
-      EntryState.fromJson(json['seen'] as Map<String, dynamic>);
+  SeenState fromJson(Map<String, dynamic> json) =>
+      SeenState.fromJson(json['seen'] as Map<String, dynamic>);
 
   @override
-  Map<String, dynamic>? toJson(EntryState state) => {'seen': state.toJson()};
+  Map<String, dynamic>? toJson(SeenState state) => {'seen': state.toJson()};
 }

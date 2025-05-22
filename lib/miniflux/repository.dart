@@ -16,9 +16,9 @@
 // along with Cabrillo.  If not, see <https://www.gnu.org/licenses/>.
 
 import 'package:cabrillo/cache/repository.dart';
+import 'package:cabrillo/seen/model.dart';
 import 'package:cabrillo/seen/repository.dart';
 import 'package:cabrillo/settings/repository.dart';
-import 'package:cabrillo/state/entry.dart';
 import 'package:http/http.dart';
 
 import 'client.dart';
@@ -71,19 +71,14 @@ class ClientRepository {
   Future<Categories> categories({Duration? ttl}) =>
       _provider.categories(ttl: ttl ?? defaultPageTTL);
 
-  Future<Feeds> categoryFeeds(
-    Category category, {
-    Duration? ttl,
-  }) => _provider.categoryFeeds(
-    category,
-    ttl: ttl ?? defaultPageTTL,
-  );
+  Future<Feeds> categoryFeeds(Category category, {Duration? ttl}) =>
+      _provider.categoryFeeds(category, ttl: ttl ?? defaultPageTTL);
 
   Future<void> updateEntries(Iterable<int> entryIds, Status status) =>
       _provider.updateEntries(entryIds, status);
 
-  Future<void> updateSeen(EntryState state) =>
-      _provider.updateEntries(state.entries, Status.read);
+  Future<void> updateSeen(SeenState state) =>
+      _provider.updateEntries(state.seen.entries, Status.read);
 
   Future<Entries> starred({
     Direction? dir = defaultDirection,

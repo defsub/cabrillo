@@ -23,7 +23,10 @@ part 'entry.g.dart';
 class EntryState {
   final Set<int> entries;
 
-  EntryState(Iterable<int> entries) : entries = Set<int>.unmodifiable(entries);
+  EntryState(Iterable<int> entries)
+    : entries = Set<int>.unmodifiable(entries);
+
+  factory EntryState.initial() => EntryState({});
 
   int get count => entries.length;
 
@@ -67,4 +70,3 @@ class EntryState {
 
   Map<String, dynamic> toJson() => _$EntryStateToJson(this);
 }
-

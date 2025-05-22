@@ -152,6 +152,7 @@ class MinifluxClient implements ClientProvider {
     String uri, {
     bool cacheable = true,
     Duration? ttl,
+    Status? status,
   }) async {
     T? cachedJson;
 
@@ -197,7 +198,24 @@ class MinifluxClient implements ClientProvider {
       if (cacheable) {
         await jsonCacheRepository.put(uri, response.bodyBytes);
       }
-      return jsonDecode(utf8.decode(response.bodyBytes)) as T;
+      final result = jsonDecode(utf8.decode(response.bodyBytes)) as T;
+      if (result is EntryList && status == Status.unread) {
+        // Status.read means treat all as read from the server
+        // so no need to do anything here
+        final read = <int>{};
+        final unread = <int>{};
+        for (final e in result.iterable) {
+          if (e.isRead) {
+            read.add(e.id);
+          } else if (e.isUnread) {
+            unread.add(e.id);
+          }
+        }
+        // remove any new unreads that are in the current un-synced state
+        unread.removeAll(seenRepository.entries);
+        seenRepository.update(read, unread);
+      }
+      return result;
     } catch (e, stackTrace) {
       if (e is SocketException || e is TimeoutException || e is TlsException) {
         if (cachedJson != null) {
@@ -213,137 +231,25 @@ class MinifluxClient implements ClientProvider {
     String uri, {
     bool cacheable = true,
     Duration? ttl,
-  }) =>
-      _getJsonResult<Map<String, dynamic>>(uri, cacheable: cacheable, ttl: ttl);
+    Status? status,
+  }) => _getJsonResult<Map<String, dynamic>>(
+    uri,
+    cacheable: cacheable,
+    ttl: ttl,
+    status: status,
+  );
 
   Future<List<dynamic>> _getJsonList(
     String uri, {
     bool cacheable = true,
     Duration? ttl,
-  }) => _getJsonResult<List<dynamic>>(uri, cacheable: cacheable, ttl: ttl);
-
-  // Future<Map<String, dynamic>> _getJsonx(
-  //   String uri, {
-  //   bool cacheable = true,
-  //   Duration? ttl,
-  // }) async {
-  //   Map<String, dynamic>? cachedJson;
-  //
-  //   _checkApiKey();
-  //
-  //   if (cacheable) {
-  //     final result = await jsonCacheRepository.get(
-  //       uri,
-  //       ttl: ttl,
-  //       referenceTime: seenRepository.lastSyncTime,
-  //     );
-  //     if (result.exists) {
-  //       log.d('cached $uri expired is ${result.expired}');
-  //       try {
-  //         cachedJson = result.read();
-  //       } catch (e) {
-  //         // can't parse cached json, will try to replace it
-  //         log.w('parse failed', error: e);
-  //       }
-  //       if (cachedJson != null && result.expired == false) {
-  //         // not expired so use the cached value
-  //         return cachedJson;
-  //       }
-  //     }
-  //   }
-  //
-  //   try {
-  //     final response = await _client
-  //         .get(Uri.parse('$endpoint$uri'), headers: _headersWithAuthToken())
-  //         .timeout(defaultTimeout);
-  //     log.d('got ${response.statusCode} for $uri');
-  //     if (response.statusCode != HttpStatus.ok) {
-  //       if (response.statusCode >= HttpStatus.internalServerError &&
-  //           cachedJson != null) {
-  //         return cachedJson;
-  //       }
-  //       throw ClientException(
-  //         statusCode: response.statusCode,
-  //         url: response.request?.url.toString(),
-  //       );
-  //     }
-  //     log.t('got response ${response.body}');
-  //     if (cacheable) {
-  //       await jsonCacheRepository.put(uri, response.bodyBytes);
-  //     }
-  //     return jsonDecode(utf8.decode(response.bodyBytes))
-  //         as Map<String, dynamic>;
-  //   } catch (e, stackTrace) {
-  //     if (e is SocketException || e is TimeoutException || e is TlsException) {
-  //       if (cachedJson != null) {
-  //         log.w('using cached json', error: e);
-  //         return cachedJson;
-  //       }
-  //     }
-  //     return Future<Map<String, dynamic>>.error(e, stackTrace);
-  //   }
-  // }
-  //
-  // Future<List<dynamic>> _getJsonList(
-  //   String uri, {
-  //   bool cacheable = true,
-  //   Duration? ttl,
-  // }) async {
-  //   List<dynamic>? cachedJson;
-  //
-  //   _checkApiKey();
-  //
-  //   if (cacheable) {
-  //     final result = await jsonCacheRepository.get(
-  //       uri,
-  //       ttl: ttl,
-  //       referenceTime: seenRepository.lastSyncTime,
-  //     );
-  //     if (result.exists) {
-  //       log.d('cached $uri expired is ${result.expired}');
-  //       try {
-  //         cachedJson = result.readList();
-  //       } catch (e) {
-  //         // can't parse cached json, will try to replace it
-  //         log.w('parse failed', error: e);
-  //       }
-  //       if (cachedJson != null && result.expired == false) {
-  //         // not expired so use the cached value
-  //         return cachedJson;
-  //       }
-  //     }
-  //   }
-  //
-  //   try {
-  //     final response = await _client
-  //         .get(Uri.parse('$endpoint$uri'), headers: _headersWithAuthToken())
-  //         .timeout(defaultTimeout);
-  //     log.d('got ${response.statusCode} for $uri');
-  //     if (response.statusCode != HttpStatus.ok) {
-  //       if (response.statusCode >= HttpStatus.internalServerError &&
-  //           cachedJson != null) {
-  //         return cachedJson;
-  //       }
-  //       throw ClientException(
-  //         statusCode: response.statusCode,
-  //         url: response.request?.url.toString(),
-  //       );
-  //     }
-  //     log.t('got response ${response.body}');
-  //     if (cacheable) {
-  //       await jsonCacheRepository.put(uri, response.bodyBytes);
-  //     }
-  //     return jsonDecode(utf8.decode(response.bodyBytes)) as List<dynamic>;
-  //   } catch (e, stackTrace) {
-  //     if (e is SocketException || e is TimeoutException || e is TlsException) {
-  //       if (cachedJson != null) {
-  //         log.w('using cached json', error: e);
-  //         return cachedJson;
-  //       }
-  //     }
-  //     return Future<List<dynamic>>.error(e, stackTrace);
-  //   }
-  // }
+    Status? status,
+  }) => _getJsonResult<List<dynamic>>(
+    uri,
+    cacheable: cacheable,
+    ttl: ttl,
+    status: status,
+  );
 
   // Future<void> _delete(String uri) async {
   //   return _method('DELETE', uri);
@@ -479,10 +385,13 @@ class MinifluxClient implements ClientProvider {
     Order? order,
     int? limit,
     Duration? ttl,
-  }) async =>
-      _getJson('/v1/entries${_p(dir, status, order, limit, true)}', ttl: ttl)
-          .then((j) => Entries.fromJson(j))
-          .catchError((Object e) => Future<Entries>.error(e));
+  }) async => _getJson(
+        '/v1/entries${_p(dir, status, order, limit, true)}',
+        ttl: ttl,
+        status: status,
+      )
+      .then((j) => Entries.fromJson(j))
+      .catchError((Object e) => Future<Entries>.error(e));
 
   /// GET /v1/entries?status=unread
   @override
@@ -494,6 +403,7 @@ class MinifluxClient implements ClientProvider {
   }) async => _getJson(
         '/v1/entries${_p(dir, Status.unread, order, limit, null)}',
         ttl: ttl,
+        status: Status.unread,
       )
       .then((j) => Entries.fromJson(j))
       .catchError((Object e) => Future<Entries>.error(e));
@@ -508,7 +418,7 @@ class MinifluxClient implements ClientProvider {
     String? query,
   }) async => _getJson(
         '/v1/entries${_p(dir, status, order, limit, null, query: query)}',
-        ttl: ttl,
+        ttl: ttl, status: status,
       )
       .then((j) => Entries.fromJson(j))
       .catchError((Object e) => Future<Entries>.error(e));
@@ -525,7 +435,7 @@ class MinifluxClient implements ClientProvider {
     String? query,
   }) async => _getJson(
         '/v1/categories/${category.id}/entries${_p(dir, status, order, limit, null, query: query)}',
-        ttl: ttl,
+        ttl: ttl, status: status,
       )
       .then((j) => Entries.fromJson(j))
       .catchError((Object e) => Future<Entries>.error(e));
@@ -542,14 +452,10 @@ class MinifluxClient implements ClientProvider {
     String? query,
   }) async => _getJson(
         '/v1/feeds/${feed.id}/entries${_p(dir, status, order, limit, null, query: query)}',
-        ttl: ttl,
+        ttl: ttl, status: status,
       )
       .then((j) => Entries.fromJson(j))
       .catchError((Object e) => Future<Entries>.error(e));
-
-  /// GET /v1/entries?status=unread&direction=desc&query=xyz
-  /// GET /v1/categories/22/entries?limit=1&order=id&direction=asc
-  /// GET /v1/feeds/42/entries?limit=1&order=id&direction=asc
 
   /// PUT /v1/entries
   @override

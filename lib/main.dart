@@ -18,9 +18,10 @@
 import 'package:cabrillo/app/app.dart';
 import 'package:cabrillo/app/bloc.dart';
 import 'package:cabrillo/app/context.dart';
+import 'package:cabrillo/l10n/app_localizations.dart';
 import 'package:cabrillo/log/basic_printer.dart';
 import 'package:cabrillo/pages/auth.dart';
-import 'package:cabrillo/pages/latest.dart';
+import 'package:cabrillo/pages/home.dart';
 import 'package:cabrillo/pages/push.dart';
 import 'package:cabrillo/player/widget.dart';
 import 'package:cabrillo/seen/seen.dart';
@@ -30,7 +31,6 @@ import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:logger/logger.dart';
 import 'package:relative_time/relative_time.dart';
@@ -100,16 +100,25 @@ class _CabrilloWidget extends StatefulWidget {
 }
 
 class __CabrilloWidgetState extends State<_CabrilloWidget> {
+  static final _navigators = {
+    NavigationIndex.home: GlobalKey<NavigatorState>(),
+    NavigationIndex.unread: GlobalKey<NavigatorState>(),
+    NavigationIndex.starred: GlobalKey<NavigatorState>(),
+  };
+
   NavigationIndex currentIndex = NavigationIndex.home;
   bool showPlayer = false;
   List<Widget> pages = [];
-  Map<NavigationIndex, GlobalKey<NavigatorState>> _navigatorKeys = {};
 
   @override
   void initState() {
     super.initState();
 
-    pages = _buildPages();
+    pages = [
+      navigatorPage(HomePage(), key: _navigators[NavigationIndex.home]),
+      navigatorPage(UnreadWidget(), key: _navigators[NavigationIndex.unread]),
+      navigatorPage(StarredWidget(), key: _navigators[NavigationIndex.starred]),
+    ];
 
     if (context.settings.hasApiKey) {
       // assume authenticated if there's an api key
@@ -119,7 +128,7 @@ class __CabrilloWidgetState extends State<_CabrilloWidget> {
   }
 
   NavigatorState? _navigatorState(NavigationIndex index) =>
-      _navigatorKeys[index]?.currentState;
+      _navigators[index]?.currentState;
 
   void _onNavTapped(BuildContext context, int index) {
     if (index == pages.length) {
@@ -134,24 +143,10 @@ class __CabrilloWidgetState extends State<_CabrilloWidget> {
     }
   }
 
-  List<Widget> _buildPages() {
-    _navigatorKeys = {
-      NavigationIndex.home: GlobalKey<NavigatorState>(),
-      NavigationIndex.unread: GlobalKey<NavigatorState>(),
-      NavigationIndex.starred: GlobalKey<NavigatorState>(),
-    };
-    return [
-      withNavigation(LatestPage(key: _navigatorKeys[NavigationIndex.home])),
-      withNavigation(UnreadWidget(key: _navigatorKeys[NavigationIndex.unread])),
-      StarredWidget(key: _navigatorKeys[NavigationIndex.starred]),
-    ];
-  }
-
-  Widget withNavigation(Widget page, {String? route}) {
+  Widget navigatorPage(Widget page, {Key? key}) {
     return Navigator(
-      key: page.key,
-      initialRoute: route ?? '/',
-      onGenerateRoute: (RouteSettings settings) {
+      key: key,
+      onGenerateRoute: (settings) {
         return MaterialPageRoute(builder: (_) => page, settings: settings);
       },
     );
@@ -180,7 +175,7 @@ class __CabrilloWidgetState extends State<_CabrilloWidget> {
         if (didPop) {
           return;
         }
-        NavigatorState? navState = _navigatorState(currentIndex);
+        final navState = _navigatorState(currentIndex);
         if (navState != null) {
           final handled = await navState.maybePop();
           if (!handled && currentIndex == NavigationIndex.home) {

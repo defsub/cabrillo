@@ -52,7 +52,7 @@ Widget starredSmallIconButton(BuildContext context, Entry entry) {
   );
 }
 
-class StarredWidget extends NavigatorClientPage<Entries> {
+class StarredWidget extends ClientPage<Entries> {
   StarredWidget({super.key});
 
   @override
@@ -87,7 +87,7 @@ class StarredWidget extends NavigatorClientPage<Entries> {
   Future<void> reloadPage(BuildContext context) async {
     await super.reloadPage(context);
     if (context.mounted) {
-      return context.reload();
+      return context.reloadCounts();
     }
   }
 }

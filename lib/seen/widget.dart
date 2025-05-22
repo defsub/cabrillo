@@ -34,42 +34,48 @@ Icon seenIcon(bool seen, {double? size}) {
   return Icon(seenIconData(seen), size: size ?? _regularSize);
 }
 
-Icon seenSmallIcon(bool seen) {
-  return seenIcon(seen, size: _smallSize);
-}
-
-Widget seenIconButton(BuildContext context, Entry entry) {
-  final seen = context.watch<SeenCubit>().state.contains(entry.id);
-  return IconButton(
-    onPressed: () {
-      if (seen) {
-        context.seen.remove(entry.id);
-      } else {
-        context.seen.add(entry.id);
-      }
-    },
-    icon: seenIcon(seen),
-  );
-}
-
-Widget seenSmallIconButton(BuildContext context, Entry entry) {
-  final seen = context.watch<SeenCubit>().state.contains(entry.id);
-  return SmallIconButton(
-    onPressed: () {
-      if (seen) {
-        context.seen.remove(entry.id);
-      } else {
-        context.seen.add(entry.id);
-      }
-    },
-    icon: seenSmallIcon(seen),
-  );
-}
-
 Icon readSmallIcon() {
   return Icon(Icons.check_circle, size: _smallSize);
 }
 
-Icon readIcon() {
-  return Icon(Icons.check_circle, size: _regularSize);
+Widget statusIconButton(
+  BuildContext context,
+  Entry entry,
+  Status? status,
+  bool small,
+) {
+  return Builder(
+    builder: (context) {
+      final seen = context.watch<SeenCubit>().state;
+      Icon icon;
+      if (status == Status.unread) {
+        if (seen.isRead(entry.id)) {
+          icon = Icon(
+            Icons.check_circle,
+            size: small ? _smallSize : _regularSize,
+          );
+        } else {
+          icon = Icon(
+            seen.contains(entry.id) ? Icons.task_alt : Icons.circle_outlined,
+            size: small ? _smallSize : _regularSize,
+          );
+        }
+      } else {
+        icon = Icon(
+          Icons.check_circle,
+          size: small ? _smallSize : _regularSize,
+        );
+      }
+      final onPressed = () {
+        if (seen.contains(entry.id)) {
+          context.seen.remove(entry.id);
+        } else {
+          context.seen.add(entry.id);
+        }
+      };
+      return small
+          ? SmallIconButton(icon: icon, onPressed: onPressed)
+          : IconButton(onPressed: onPressed, icon: icon);
+    },
+  );
 }

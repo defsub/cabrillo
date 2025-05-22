@@ -83,8 +83,8 @@ Widget feedIcon(
   return FutureBuilder<Favicon>(
     future: result,
     builder: (context, snapshot) {
+      Widget? result;
       if (snapshot.hasData) {
-        Widget result;
         final bytes = snapshot.data?.bytes;
         if (bytes == null) {
           result = Icon(Icons.rss_feed);
@@ -106,14 +106,17 @@ Widget feedIcon(
           }
         }
         iconCache[feed.id] = result;
-        return result;
-      } else {
-        return EmptyWidget();
       }
+      return result ?? EmptyWidget();
     },
   );
 }
 
 void showImage(BuildContext context, String url) {
-  showImageViewer(context, CachedNetworkImageProvider(url));
+  showImageViewer(
+    context,
+    CachedNetworkImageProvider(url),
+    doubleTapZoomable: true,
+    swipeDismissible: true,
+  );
 }

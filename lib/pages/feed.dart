@@ -125,7 +125,7 @@ class FeedEntriesWidget extends ClientPage<Entries> {
   Future<void> reloadPage(BuildContext context) async {
     await super.reloadPage(context);
     if (context.mounted) {
-      return context.reload();
+      return context.reloadCounts();
     }
   }
 
