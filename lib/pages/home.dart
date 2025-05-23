@@ -129,18 +129,7 @@ class HomePage extends StatelessWidget {
       applicationName: context.strings.cabrillo,
       applicationVersion: appVersion,
       applicationLegalese: 'Copyleft \u00a9 2025 defsub',
-      // children: <Widget>[
-      //   InkWell(
-      //     child: const Text(
-      //       appHome,
-      //       style: TextStyle(
-      //         decoration: TextDecoration.underline,
-      //         color: Colors.blueAccent,
-      //       ),
-      //     ),
-      //     onTap: () => launchUrl(Uri.parse(appHome)),
-      //   ),
-      // ],
+      applicationIcon: Image.asset('assets/logo.png', width: 96, height: 96),
     );
   }
 

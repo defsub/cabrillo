@@ -23,7 +23,20 @@ import 'package:cabrillo/widget/empty.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_image_viewer/easy_image_viewer.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+
+class _CacheManager extends CacheManager with ImageCacheManager {
+  static const key = DefaultCacheManager.key;
+
+  static final _CacheManager instance = _CacheManager._(
+    Duration(days: 7), // default is 30 days
+    1000, // default is 200
+  );
+
+  _CacheManager._(Duration ttl, int maxImages)
+    : super(Config(key, maxNrOfCacheObjects: maxImages, stalePeriod: ttl));
+}
 
 Widget cachedImage(
   String url, {
@@ -33,15 +46,12 @@ Widget cachedImage(
   Alignment? alignment,
 }) {
   return CachedNetworkImage(
+    cacheManager: _CacheManager.instance,
     width: width,
     height: height,
     fit: fit,
     imageUrl: url,
     alignment: alignment ?? Alignment.center,
-    // progressIndicatorBuilder: (context, url, downloadProgress) =>
-    //     CircularProgressIndicator(value: downloadProgress.progress),
-    // placeholder: (context, url) => Icon(Icons.image),
-    // errorWidget: (context, url, error) => Icon(Icons.error),
   );
 }
 

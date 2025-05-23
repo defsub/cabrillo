@@ -24,8 +24,8 @@ import 'package:logger/logger.dart';
 import 'model.dart';
 import 'repository.dart';
 
-// used to override forced refresh within this amount of seconds
-const cacheLifespan = Duration(seconds: 30);
+const minCacheLifespan = Duration(seconds: 30);
+const maxCacheLifespan = Duration(days: 14);
 
 abstract class JsonCacheProvider {
   Future<void> put(String uri, Uint8List body);
@@ -74,6 +74,23 @@ class HiveJsonCache implements JsonCacheProvider {
   Future<void> _init() async {
     // Note: Hive init and register adapters is called in main
     box = await Hive.openBox<CachedJson>('json_cache');
+    await expire(maxCacheLifespan);
+  }
+
+  Future<void> expire(Duration ttl) async {
+    final now = DateTime.now();
+    for (var key in box.keys) {
+      final value = box.get(key);
+      if (value != null) {
+        final expired = isExpired(now, ttl, value);
+        if (expired) {
+          log.d(
+            'expiring json_cache entry (age ${now.difference(value.lastModified).inDays} days): $key',
+          );
+          await box.delete(key);
+        }
+      }
+    }
   }
 
   @override
@@ -82,6 +99,17 @@ class HiveJsonCache implements JsonCacheProvider {
     final cache = CachedJson(utf8.decode(data), DateTime.now());
     // log.d('put $uri');
     return box.put(uri, cache);
+  }
+
+  bool isExpired(DateTime now, Duration ttl, CachedJson entry) {
+    var expired = false;
+    final lastModified = entry.lastModified;
+    final lifespan = now.difference(lastModified);
+    if (lifespan > minCacheLifespan) {
+      final expirationTime = lastModified.add(ttl);
+      expired = now.isAfter(expirationTime);
+    }
+    return expired;
   }
 
   @override
@@ -97,18 +125,19 @@ class HiveJsonCache implements JsonCacheProvider {
       final lastModified = cache.lastModified;
       var expired = false;
       if (ttl != null) {
-        final now = DateTime.now();
-        final lifespan = now.difference(lastModified);
-        if (lifespan > cacheLifespan) {
-          final expirationTime = lastModified.add(ttl);
-          expired = DateTime.now().isAfter(expirationTime);
-        }
+        expired = isExpired(DateTime.now(), ttl, cache);
       }
       if (!expired) {
         // older that ref time means expired
         expired = referenceTime?.isAfter(lastModified) ?? false;
       }
-      return JsonCacheEntry<T>(uri, cache.data, cache.lastModified, true, expired);
+      return JsonCacheEntry<T>(
+        uri,
+        cache.data,
+        cache.lastModified,
+        true,
+        expired,
+      );
     }
     return JsonCacheResult.notFound();
   }

@@ -1,3 +1,9 @@
+## 0.1.0
+
+- expire json cache entries (min 30 seconds, max 14 days)
+- expire cached images (7 days, 1000 images)
+- icon and screenshots
+
 ## 0.0.5
 
 - restore player at startup

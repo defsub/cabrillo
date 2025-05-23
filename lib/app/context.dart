@@ -79,7 +79,7 @@ extension AppContext on BuildContext {
       clientRepository.updateSeen(state).then((_) async {
         seenRepository.sync();
         app.syncComplete();
-        // TOOD this seems like a lot...
+        // TODO this seems like a lot...
         await reloadCounts();
         await unread.reload();
         await latest.reload();
