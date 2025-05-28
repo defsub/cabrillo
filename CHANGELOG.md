@@ -1,3 +1,8 @@
+## 0.1.2
+
+- fix page offset
+- pub upgrade
+
 ## 0.1.1
 
 - fixed starred toggle with cache invalidation

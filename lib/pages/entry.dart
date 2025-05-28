@@ -25,7 +25,6 @@ import 'package:cabrillo/util/merge.dart';
 import 'package:cabrillo/widget/image.dart';
 import 'package:cabrillo/widget/menu.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:share_plus/share_plus.dart';
@@ -95,7 +94,6 @@ class EntryListWidget extends StatelessWidget {
   }
 
   void _onEntry(BuildContext context, int index) {
-    print('onEntry $index');
     push(
       context,
       builder:
@@ -200,7 +198,7 @@ class EntryTileWidget extends StatelessWidget {
 }
 
 class ScrollableEntriesPage extends StatefulWidget {
-  final int initialIndex;
+  final int initialPage;
   final List<Entry> entries;
   final Status? status;
   final Category? category;
@@ -208,7 +206,7 @@ class ScrollableEntriesPage extends StatefulWidget {
   final String? title;
 
   const ScrollableEntriesPage(
-    this.initialIndex,
+    this.initialPage,
     this.entries, {
     super.key,
     this.status,
@@ -222,14 +220,15 @@ class ScrollableEntriesPage extends StatefulWidget {
 }
 
 class EntriesPageState extends State<ScrollableEntriesPage> {
-  int currentIndex = 0;
+  int currentPage = 0;
 
   @override
   void initState() {
     super.initState();
+    currentPage = widget.initialPage;
   }
 
-  Entry get entry => widget.entries[currentIndex];
+  Entry get entry => widget.entries[currentPage];
 
   @override
   Widget build(BuildContext context) {
@@ -252,10 +251,10 @@ class EntriesPageState extends State<ScrollableEntriesPage> {
       body: SizedBox(
         width: size.width,
         child: PageView.builder(
-          controller: PageController(initialPage: widget.initialIndex),
+          controller: PageController(initialPage: widget.initialPage),
           onPageChanged: (index) {
             setState(() {
-              currentIndex = index;
+              currentPage = index;
             });
           },
           scrollDirection: Axis.horizontal,
@@ -300,15 +299,6 @@ class EntryPage extends StatelessWidget {
       body: EntryWidget(entry, status: status),
     );
   }
-}
-
-void _onShare(BuildContext context, Entry entry) {
-  final params = ShareParams(uri: Uri.parse(entry.url));
-  SharePlus.instance.share(params);
-}
-
-void _onOpenLink(BuildContext context, Entry entry) {
-  launchUrl(Uri.parse(entry.url));
 }
 
 class EntryWidget extends StatelessWidget {
@@ -394,4 +384,13 @@ String _readingTime(BuildContext context, Entry entry) {
   return (entry.hasAudio)
       ? context.strings.listeningTime(entry.readingTime)
       : context.strings.readingTime(entry.readingTime);
+}
+
+void _onShare(BuildContext context, Entry entry) {
+  final params = ShareParams(uri: Uri.parse(entry.url));
+  SharePlus.instance.share(params);
+}
+
+void _onOpenLink(BuildContext context, Entry entry) {
+  launchUrl(Uri.parse(entry.url));
 }
