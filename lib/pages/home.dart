@@ -83,13 +83,12 @@ class HomePage extends StatelessWidget {
       return CategoryList(state.categories);
     }
 
+    final size = MediaQuery.of(context).size;
     final bodyHeight =
-        MediaQuery.of(context).size.height - // total height
+        size.height - // total height
         kToolbarHeight - // top AppBar height
         MediaQuery.of(context).padding.top - // top padding
         kBottomNavigationBarHeight; // BottomNavigationBar height
-
-    final size = MediaQuery.of(context).size;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -107,9 +106,6 @@ class HomePage extends StatelessWidget {
 
   Future<void> reloadPage(BuildContext context) async {
     await context.categories.reload();
-    if (context.mounted) {
-      await context.latest.reload();
-    }
     if (context.mounted) {
       return context.reloadCounts();
     }
@@ -335,12 +331,11 @@ class ImageTile extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     return GestureDetector(
       onTap: () {
-        context.seen.add(entry.id);
         push(
           context,
           builder:
               (_) =>
-                  EntryWidget(entry, feed: entry.feed, status: Status.unread),
+                  EntryPage(entry, feed: entry.feed, status: Status.unread),
         );
       },
       child: Stack(

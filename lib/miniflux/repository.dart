@@ -32,6 +32,7 @@ const defaultOrder = Order.publishedAt;
 class ClientRepository {
   final ClientProvider _provider;
   final SettingsRepository settingsRepository;
+  final JsonCacheRepository jsonCacheRepository;
 
   static const _defaultPageTTL = Duration(hours: 1);
   static const _defaultPageSize = 100;
@@ -39,7 +40,7 @@ class ClientRepository {
 
   ClientRepository({
     required this.settingsRepository,
-    required JsonCacheRepository jsonCacheRepository,
+    required this.jsonCacheRepository,
     required SeenRepository seenRepository,
     String? userAgent,
     ClientProvider? provider,
@@ -158,7 +159,11 @@ class ClientRepository {
     query: query,
   );
 
-  Future<void> toggle(int id) => _provider.toggle(id);
+  Future<void> toggle(int id) async {
+    await _provider.toggle(id);
+    // invalidate anything cached with starred=
+    return jsonCacheRepository.invalidate(RegExp(r'starred='));
+  }
 
   Future<Counts> counts({Duration? ttl}) => _provider.counts(ttl: ttl);
 }

@@ -18,12 +18,13 @@ Cabrillo is a free software client for [Miniflux](https://miniflux.app/).
 * Share entries and open links in external browser
 * Support for image enclosures
 * Optimized for one-handed navigation
+* Material design with light and dark mode
 
 ## Tips
 
 The empty circle icon means unread.
 
-The unfilled circle icon with a checkmark means read locally.
+The unfilled circle icon with a checkmark means seen (read locally).
 
 The filled circle icon with a checkmark means read at the server.
 

@@ -20,10 +20,12 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'model.g.dart';
 
+const _maxReadEntries = 500;
+
 @JsonSerializable()
 class SeenState {
   final EntryState seen;
-  final EntryState read; // TODO this needs to be purged
+  final EntryState read;
 
   SeenState(this.seen, this.read);
 
@@ -51,8 +53,12 @@ class SeenState {
   bool isRead(int id) => read.contains(id);
 
   SeenState sync() {
+    // move seen to read, this makes it easy for seen entries to
+    // immediately show as read after a sync. however, the read
+    // entries will grow unbounded so compaction is used to remove
+    // older entries.
     final r = read.addAll(seen.entries);
-    return SeenState(EntryState.initial(), r);
+    return SeenState(EntryState.initial(), r.compact(_maxReadEntries));
   }
 
   factory SeenState.fromJson(Map<String, dynamic> json) =>

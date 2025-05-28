@@ -21,7 +21,7 @@ import 'package:cabrillo/miniflux/repository.dart';
 import 'package:cabrillo/settings/repository.dart';
 
 const appName = 'Cabrillo';
-const appVersion = '0.1.0'; // #version#
+const appVersion = '0.1.1'; // #version#
 const appSource = 'https://cabrillo.app/';
 const appHome = 'https://cabrillo.app/';
 

@@ -60,7 +60,11 @@ class UnreadWidget extends StatelessWidget {
       ),
       body: RefreshIndicator(
         onRefresh: () => reloadPage(context),
-        child: EntryListWidget(list, status: Status.unread),
+        child: EntryListWidget(
+          list,
+          title: context.strings.unreadTitle,
+          status: Status.unread,
+        ),
       ),
     );
   }

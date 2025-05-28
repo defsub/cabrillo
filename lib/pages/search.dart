@@ -62,7 +62,12 @@ class SearchWidget extends ClientPage<Entries> {
       body: Column(
         children: [
           Flexible(
-            child: EntryListWidget(entries, feed: feed, category: category),
+            child: EntryListWidget(
+              entries,
+              feed: feed,
+              category: category,
+              title: context.strings.searchTitle,
+            ),
           ),
         ],
       ),

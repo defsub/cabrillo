@@ -37,6 +37,8 @@ abstract class JsonCacheProvider {
   });
 
   Future<void> invalidate(String uri);
+
+  Iterable<dynamic> get keys;
 }
 
 class JsonCacheEntry<T> implements JsonCacheResult<T> {
@@ -140,6 +142,11 @@ class HiveJsonCache implements JsonCacheProvider {
       );
     }
     return JsonCacheResult.notFound();
+  }
+
+  @override
+  Iterable<dynamic> get keys {
+    return box.keys;
   }
 
   @override

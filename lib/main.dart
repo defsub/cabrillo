@@ -96,10 +96,10 @@ class _CabrilloWidget extends StatefulWidget {
   const _CabrilloWidget();
 
   @override
-  State<_CabrilloWidget> createState() => __CabrilloWidgetState();
+  State<_CabrilloWidget> createState() => _CabrilloWidgetState();
 }
 
-class __CabrilloWidgetState extends State<_CabrilloWidget> {
+class _CabrilloWidgetState extends State<_CabrilloWidget> {
   static final _navigators = {
     NavigationIndex.home: GlobalKey<NavigatorState>(),
     NavigationIndex.unread: GlobalKey<NavigatorState>(),

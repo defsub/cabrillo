@@ -202,6 +202,12 @@ abstract class AppLocalizations {
   /// **'Starred'**
   String get starredTitle;
 
+  /// No description provided for @searchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get searchTitle;
+
   /// No description provided for @navHome.
   ///
   /// In en, this message translates to:

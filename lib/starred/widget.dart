@@ -78,7 +78,11 @@ class StarredWidget extends ClientPage<Entries> {
       ),
       body: RefreshIndicator(
         onRefresh: () => reloadPage(context),
-        child: EntryListWidget(list, status: Status.unread),
+        child: EntryListWidget(
+          list,
+          status: Status.unread,
+          title: context.strings.starredTitle,
+        ),
       ),
     );
   }

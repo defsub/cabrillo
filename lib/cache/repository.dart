@@ -48,7 +48,12 @@ class JsonCacheRepository {
     return _cache.get<T>(uri, ttl: ttl, referenceTime: referenceTime);
   }
 
-  Future<void> invalidate(String uri) async {
-    return _cache.invalidate(uri);
+  Future<void> invalidate(RegExp regexp) async {
+    for (final key in _cache.keys) {
+      final url = key.toString();
+      if (regexp.hasMatch(url)) {
+        await _cache.invalidate(url);
+      }
+    }
   }
 }

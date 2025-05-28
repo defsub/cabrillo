@@ -25,6 +25,7 @@ import 'package:cabrillo/util/merge.dart';
 import 'package:cabrillo/widget/image.dart';
 import 'package:cabrillo/widget/menu.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:share_plus/share_plus.dart';
@@ -38,6 +39,7 @@ class EntryListWidget extends StatelessWidget {
   final Category? category;
   final Feed? feed;
   final Status? status;
+  final String? title;
 
   const EntryListWidget(
     this._entries, {
@@ -45,6 +47,7 @@ class EntryListWidget extends StatelessWidget {
     this.feed,
     this.status,
     this.category,
+    this.title,
   });
 
   @override
@@ -68,6 +71,7 @@ class EntryListWidget extends StatelessWidget {
                   category: category,
                   feed: feed,
                   size: Size(w, h),
+                  onTap: () => _onEntry(context, index),
                 );
                 if (context.enableAutoSeen(status, entry)) {
                   return VisibilityDetector(
@@ -89,6 +93,21 @@ class EntryListWidget extends StatelessWidget {
       ),
     );
   }
+
+  void _onEntry(BuildContext context, int index) {
+    push(
+      context,
+      builder:
+          (_) => ScrollableEntriesPage(
+            index,
+            _entries,
+            status: status,
+            category: category,
+            feed: feed,
+            title: title,
+          ),
+    );
+  }
 }
 
 class EntryTileWidget extends StatelessWidget {
@@ -97,6 +116,7 @@ class EntryTileWidget extends StatelessWidget {
   final Category? category;
   final Feed? feed;
   final Size? size;
+  final void Function() onTap;
 
   const EntryTileWidget(
     this.entry, {
@@ -105,6 +125,7 @@ class EntryTileWidget extends StatelessWidget {
     this.category,
     this.feed,
     this.size,
+    required this.onTap,
   });
 
   @override
@@ -114,7 +135,7 @@ class EntryTileWidget extends StatelessWidget {
         context.settings.state.settings.showImages ? entry.image : null;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: () => _onEntry(context, entry),
+      onTap: onTap,
       child: Column(
         children: [
           Container(
@@ -150,7 +171,6 @@ class EntryTileWidget extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
                     feedIcon(context, entry.feed, width: 20),
-                    // if (entry.hasAudio) Icon(Icons.podcasts, size: 20),
                     Text(
                       merge([
                         relativeDate(context, entry.publishedAt),
@@ -176,28 +196,86 @@ class EntryTileWidget extends StatelessWidget {
       ),
     );
   }
+}
 
-  void _onEntry(BuildContext context, Entry entry) {
-    push(
-      context,
-      builder:
-          (_) => EntryWidget(
-            entry,
-            status: status,
-            category: category,
-            feed: feed,
-          ),
+class ScrollableEntriesPage extends StatefulWidget {
+  final int initialIndex;
+  final List<Entry> entries;
+  final Status? status;
+  final Category? category;
+  final Feed? feed;
+  final String? title;
+
+  const ScrollableEntriesPage(
+    this.initialIndex,
+    this.entries, {
+    super.key,
+    this.status,
+    this.category,
+    this.feed,
+    this.title,
+  });
+
+  @override
+  State<ScrollableEntriesPage> createState() => EntriesPageState();
+}
+
+class EntriesPageState extends State<ScrollableEntriesPage> {
+  int currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    currentIndex = widget.initialIndex;
+  }
+
+  Entry get entry => widget.entries[currentIndex];
+
+  @override
+  Widget build(BuildContext context) {
+    final title =
+        widget.category?.title ??
+        widget.feed?.title ??
+        widget.title ??
+        entry.title;
+    final size = MediaQuery.of(context).size;
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(title),
+        actions: [
+          popupMenu(context, [
+            PopupItem.share(context, (_) => _onShare(context, entry)),
+            PopupItem.openLink(context, (_) => _onOpenLink(context, entry)),
+          ]),
+        ],
+      ),
+      body: SizedBox(
+        width: size.width,
+        child: PageView.builder(
+          onPageChanged: (index) {
+            setState(() {
+              currentIndex = index;
+            });
+          },
+          scrollDirection: Axis.horizontal,
+          itemCount: widget.entries.length,
+          itemBuilder: (context, index) {
+            final entry = widget.entries[index];
+            return EntryWidget(entry, status: widget.status);
+          },
+        ),
+      ),
     );
   }
 }
 
-class EntryWidget extends StatelessWidget {
+class EntryPage extends StatelessWidget {
   final Entry entry;
   final Status? status;
   final Category? category;
   final Feed? feed;
 
-  const EntryWidget(
+  const EntryPage(
     this.entry, {
     super.key,
     this.status,
@@ -207,21 +285,47 @@ class EntryWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final entryImage =
-        context.settings.state.settings.showImages ? entry.image : null;
     final title = category?.title ?? feed?.title ?? entry.title;
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
         actions: [
           popupMenu(context, [
-            PopupItem.share(context, (_) => _onShare(context)),
-            PopupItem.openLink(context, (_) => _onOpenLink(context)),
+            PopupItem.share(context, (_) => _onShare(context, entry)),
+            PopupItem.openLink(context, (_) => _onOpenLink(context, entry)),
           ]),
-          // popupMenu(context, [PopupItem.reload(context, (_) {})]),
         ],
       ),
-      body: SingleChildScrollView(
+      body: EntryWidget(entry, status: status),
+    );
+  }
+}
+
+void _onShare(BuildContext context, Entry entry) {
+  final params = ShareParams(uri: Uri.parse(entry.url));
+  SharePlus.instance.share(params);
+}
+
+void _onOpenLink(BuildContext context, Entry entry) {
+  launchUrl(Uri.parse(entry.url));
+}
+
+class EntryWidget extends StatelessWidget {
+  final Entry entry;
+  final Status? status;
+
+  const EntryWidget(this.entry, {super.key, this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    if (context.enableAutoSeen(status, entry)) {
+      context.seen.add(entry.id);
+    }
+    final entryImage =
+        context.settings.state.settings.showImages ? entry.image : null;
+    return SizedBox(
+      width: MediaQuery.of(context).size.width,
+      child: SingleChildScrollView(
         child: Column(
           children: [
             ListTile(
@@ -279,15 +383,6 @@ class EntryWidget extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  void _onShare(BuildContext context) {
-    final params = ShareParams(uri: Uri.parse(entry.url));
-    SharePlus.instance.share(params);
-  }
-
-  void _onOpenLink(BuildContext context) {
-    launchUrl(Uri.parse(entry.url));
   }
 }
 

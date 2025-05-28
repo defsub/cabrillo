@@ -1,3 +1,9 @@
+## 0.1.1
+
+- fixed starred toggle with cache invalidation
+- fixed unbounded seen to read set with compaction
+- added horizontal scrolling for entry lists
+
 ## 0.1.0
 
 - expire json cache entries (min 30 seconds, max 14 days)

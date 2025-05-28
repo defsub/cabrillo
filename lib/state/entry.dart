@@ -54,6 +54,17 @@ class EntryState {
     return EntryState(s);
   }
 
+  EntryState compact(int keep) {
+    // default Set is ordered, removing from first should remove oldest
+    // entries
+    final list = List<int>.from(entries);
+    for (var length = list.length; length > keep; length--) {
+      list.removeAt(0);
+    }
+    final s = Set<int>.from(list);
+    return EntryState(s);
+  }
+
   EntryState update(Iterable<int> add, Iterable<int> remove) {
     final s = Set<int>.from(entries);
     s.removeAll(remove);

@@ -63,6 +63,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get starredTitle => 'Starred';
 
   @override
+  String get searchTitle => 'Search';
+
+  @override
   String get navHome => 'Home';
 
   @override

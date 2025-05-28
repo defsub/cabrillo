@@ -1,7 +1,7 @@
 name: cabrillo
 description: "Cabrillo - Miniflux RSS reader"
 publish_to: 'none'
-version: "0.1.0" #version#
+version: "0.1.1" #version#
 
 environment:
   sdk: ^3.7.2
