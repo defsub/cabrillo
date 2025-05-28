@@ -95,6 +95,7 @@ class EntryListWidget extends StatelessWidget {
   }
 
   void _onEntry(BuildContext context, int index) {
+    print('onEntry $index');
     push(
       context,
       builder:
@@ -226,7 +227,6 @@ class EntriesPageState extends State<ScrollableEntriesPage> {
   @override
   void initState() {
     super.initState();
-    currentIndex = widget.initialIndex;
   }
 
   Entry get entry => widget.entries[currentIndex];
@@ -252,6 +252,7 @@ class EntriesPageState extends State<ScrollableEntriesPage> {
       body: SizedBox(
         width: size.width,
         child: PageView.builder(
+          controller: PageController(initialPage: widget.initialIndex),
           onPageChanged: (index) {
             setState(() {
               currentIndex = index;
